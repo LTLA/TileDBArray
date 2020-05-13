@@ -1,6 +1,77 @@
-#' @importFrom tiledb tiledb_dense dim domain schema
+#' Working with dense TileDB arrays
+#'
+#' Define a \linkS4class{DelayedArray} backend for dense TileDB arrays in the form of DenseTileDBArray objects.
+#'
+#' @section Constructing a DenseTileDBArray:
+#' \code{DenseTileDBArray(x, ...)} yields a DenseTileDBArray object
+#' given \code{x}, a URI path to the dense array (e.g., a directory).
+#' Further arguments can be passed to \code{\link{tiledb_dense}} via \code{...}.
+#' Alternatively, \code{x} can be a DenseTileDBArraySeed object.
+#'
+#' \code{DenseTileDBArraySeed(x, ...)} yields a DenseTileDBArraySeed
+#' with the same arguments as described for \code{DenseTileDBArray}.
+#' If \code{x} is already a DenseTileDBArraySeed, it is returned
+#' directly without further modification.
+#'
+#' \code{\link{DelayedArray}(x)} returns a DenseTileDBArray object
+#' given \code{x}, a DenseTileDBArraySeed.
+#'
+#' In all cases, two-dimensional arrays will automatically generate a DenseTileDBMatrix,
+#' a subclass of the DenseTileDBArray.
+#'
+#' @section Available operations:
+#' \code{\link{extract_array}(x, index)} will return an ordinary 
+#' array corresponding to the DenseTileDBArray \code{x} subsetted
+#' to the indices in \code{index}. 
+#' The latter should be a list of length equal to the number of 
+#' dimensions in \code{x}.
+#'
+#' All operations supported by \linkS4class{DelayedArray} objects are 
+#' also available for DenseTileDBArray objects.
+#' 
+#' @aliases
+#' DenseTileDBArraySeed
+#' DenseTileDBArraySeed-class
+#' DenseTileDBArray
+#' DenseTileDBArray-class
+#' show,DenseTileDBArray-method
+#' extract_array,DenseTileDBArray-method
+#' DelayedArray,DenseTileDBArraySeed-method
+#'
+#' @author Aaron Lun
+#' 
+#' @examples
+#' library(tiledb)
+#' ctx <- tiledb_ctx()
+#' 
+#' dom <- tiledb_domain(ctx=ctx,
+#'     dims = c(tiledb_dim(ctx=ctx, "rows", c(1L, 100L), 100L, "INT32"),
+#'         tiledb_dim(ctx=ctx, "cols", c(1L, 100L), 100L, "INT32")))
+#' 
+#' # The array will be dense with a single attribute "a" 
+#' # so each (i,j) cell can store an integer.
+#' schema <- tiledb_array_schema(ctx=ctx, dom, 
+#'     attrs = c(tiledb_attr(ctx=ctx, "a", type = "INT32")))
+#' 
+#' # Create the (empty) array on disk.
+#' array_name <- tempfile()
+#' tiledb_array_create(array_name, schema)
+#' 
+#' # Setup.
+#' data <- matrix(rpois(10000, 5), nrow=100, ncol=100)
+#' A <- tiledb_dense(ctx=ctx, uri = array_name)
+#' A[] <- data
+#' 
+#' library(DelayedArray)
+#' library(TileDBArray)
+#' B <- DenseTileDBArray("whee", ctx=ctx)
+#'
+#' @name DenseTileDBArray
+NULL
+
+#' @importFrom tiledb tiledb_dense domain schema
 DenseTileDBArraySeed <- function(x, ..., query_type="READ") {
-    if (is(x, "DenseTilDBArraySeed")) {
+    if (is(x, "DenseTileDBArraySeed")) {
         return(x)
     }
     if (!is(x, "tiledb_dense")) {
