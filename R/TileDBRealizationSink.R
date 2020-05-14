@@ -29,8 +29,9 @@
 #' \item \code{context} is the TileDB context, defaulting to the output of \code{\link{tiledb_ctx}()}.
 #' }
 #'
-#' \code{writeTileDBArray(x, ...)} writes the matrix-like object \code{x} to a TileDB backend,
+#' \code{writeTileDBArray(x, sparse=is_sparse(x), ...)} writes the matrix-like object \code{x} to a TileDB backend,
 #' returning a \linkS4class{TileDBArray} object referring to that backend. 
+#' Whether a sparse array should be created is determined automatically from \code{x} itself.
 #' Arguments in \code{...} are passed to \code{TileDBRealizationSink} to configure the TileDB representation;
 #' all arguments listed above aside from \code{dim}, \code{dimnames} and \code{type} are applicable.
 #'
@@ -195,8 +196,8 @@ setMethod("write_block", "TileDBRealizationSink", function(x, viewport, block) {
 setMethod("type", "TileDBRealizationSink", function(x) x@type)
 
 #' @export
-writeTileDBArray <- function(x, path=NULL, ...) {
-    sink <- TileDBRealizationSink(dim(x), dimnames=dimnames(x), type=type(x), path=path, ...)
+writeTileDBArray <- function(x, sparse=is_sparse(x), ...) {
+    sink <- TileDBRealizationSink(dim(x), dimnames=dimnames(x), type=type(x), sparse=sparse, ...)
     BLOCK_write_to_sink(x, sink)
     as(sink, "TileDBArray")
 }
