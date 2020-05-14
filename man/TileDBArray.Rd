@@ -14,11 +14,15 @@ The TileDBArray class provides a \linkS4class{DelayedArray} backend for TileDB a
 }
 \section{Constructing a TileDBArray}{
 
-\code{TileDBArray(x)} returns a TileDBArray object
-given \code{x}, a URI path to the dense array (e.g., a directory).
-Alternatively, \code{x} can be a TileDBArraySeed object.
+\code{TileDBArray(x, attr)} returns a TileDBArray object given:
+\itemize{
+\item \code{x}, a URI path to a TileDB backend, most typically a directory.
+\item \code{attr}, a string specifying the attribute to represent in the array.
+Defaults to the first attribute.
+}
+Alternatively, \code{x} can be a TileDBArraySeed object, in which case \code{attr} is ignored.
 
-\code{TileDBArraySeed(x)} returns a TileDBArraySeed
+\code{TileDBArraySeed(x, attr)} returns a TileDBArraySeed
 with the same arguments as described for \code{TileDBArray}.
 If \code{x} is already a TileDBArraySeed, it is returned
 directly without further modification.

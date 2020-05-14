@@ -5,9 +5,9 @@ Description: Implements a set of DelayedArray backends for the TileDB
     dense/sparse array storage framework.
 Imports: 
     methods, 
-    Matrix,
     tiledb, 
     BiocGenerics,
     IRanges,
-    DelayedArray
+    DelayedArray,
+    base64enc
 RoxygenNote: 7.1.0

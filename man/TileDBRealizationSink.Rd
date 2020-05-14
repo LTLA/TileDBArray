@@ -15,25 +15,36 @@ Write array data to a TileDB backend via \pkg{DelayedArray}'s \linkS4class{Reali
 }
 \section{Writing a TileDBArray}{
 
-\code{writeTileDBArray(x, ...)} writes the matrix-like object \code{x} to a TileDB backend.
-returning a \linkS4class{TileDBArray} object referring to that resource.
-Arguments in \code{...} are passed to \code{TileDBRealizationSink} to configure the TileDB representation
-and include \code{path}, \code{sparse}, \code{tile} and \code{ctx}.
-
-\code{TileDBRealizationSink(dim, type="double", path=NULL, sparse=FALSE, tile=100L, ctx=NULL)}
+\preformatted{TileDBRealizationSink(
+    dim, 
+    dimnames=NULL, 
+    type="double", 
+    path=getTileDBPath(), 
+    attr=getTileDBAttr(), 
+    sparse=getTileDBSparse(), 
+    extent=getTileDBExtent(), 
+    context=getTileDBContext()
+)}
 returns a TileDBRealizationSink object that can be used to write content to a TileDB backend.
 It accepts the following arguments:
 \itemize{
 \item \code{dim}, an integer vector (usually of length 2) to specify the array dimensions.
+\item \code{dimnames}, a list of length equal to \code{dim}, containing character vectors with names for each dimension.
+Defaults to \code{NULL}, i.e., no dimnames.
 \item \code{type}, a string specifying the data type.
 Currently only numeric, logical and integer arrays are supported.
 \item \code{path}, a string containing the location of the new TileDB backend.
-Defaults to a temporary directory if not specified.
+\item \code{attr}, a string specifying the name of the attribute to store.
 \item \code{sparse} is a logical scalar indicating whether the array should be stored in sparse form.
-\item \code{tile} is an integer scalar or vector specifying the tile extent for each dimension,
-roughly interpreted as the size of chunks used for reading/writing the resource.
-\item \code{ctx} is the TileDB context, defaulting to the output of \code{\link{tiledb_ctx}()}.
+\item \code{extent} is an integer scalar (or vector of length equal to \code{dim})
+specifying the tile extent for each dimension.
+\item \code{context} is the TileDB context, defaulting to the output of \code{\link{tiledb_ctx}()}.
 }
+
+\code{writeTileDBArray(x, ...)} writes the matrix-like object \code{x} to a TileDB backend,
+returning a \linkS4class{TileDBArray} object referring to that backend. 
+Arguments in \code{...} are passed to \code{TileDBRealizationSink} to configure the TileDB representation;
+all arguments listed above aside from \code{dim}, \code{dimnames} and \code{type} are applicable.
 }
 
 \section{Coercing to a TileDBArray}{
@@ -56,8 +67,28 @@ X <- matrix(rnorm(100000), ncol=200)
 path <- tempfile()
 out <- writeTileDBArray(X, path=path)
 
+# Works for integer matrices.
+Xi <- matrix(rpois(100000, 2), ncol=200)
+pathi <- tempfile()
+outi <- writeTileDBArray(Xi, path=pathi)
+
+# Works for logical matrices.
+Xl <- matrix(rpois(100000, 0.5) > 0, ncol=200)
+pathl <- tempfile()
+outl <- writeTileDBArray(Xl, path=pathl)
+
+# Works for sparse numeric matrices.
 Y <- Matrix::rsparsematrix(1000, 1000, density=0.01)
 path2 <- tempfile()
 out2 <- writeTileDBArray(Y, path=path2, sparse=TRUE)
+
+# And for sparse logical matrices.
+path2l <- tempfile()
+out2l <- writeTileDBArray(Y > 0, path=path2l, sparse=TRUE)
+
+# Works for dimnames.
+rownames(X) <- sprintf("GENE_\%i", seq_len(nrow(X)))
+path3 <- tempfile()
+out3 <- writeTileDBArray(X, path=path3)
 
 }
