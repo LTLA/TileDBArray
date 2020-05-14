@@ -1,0 +1,122 @@
+---
+title: A DelayedArray backend for TileDB
+author:
+- name: Aaron Lun
+  email: luna@gene.com
+  affiliation: Genentech gRED B&CB
+date: "Revised: May 15, 2020"
+output:
+  BiocStyle::html_document:
+    toc_float: yes
+vignette: >
+  %\VignetteIndexEntry{User guide}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}  
+---
+
+```{r, echo=FALSE, results="hide"}
+knitr::opts_chunk$set(error=FALSE, message=FALSE, warning=FALSE)
+library(BiocStyle)
+```
+
+# Introduction
+
+TileDB implements a framework for local and remote storage of dense and sparse arrays.
+We can use this as a `DelayedArray` backend to provide an array-level abstraction,
+thus allowing the data to be used in many places where an ordinary array or matrix might be used.
+The `r Biocpkg("TileDBArray")` package implements the necessary wrappers around `r Githubpkg("TileDB-Inc/TileDB-R")`
+to support read/write operations on TileDB arrays within the `r Biocpkg("DelayedArray")` framework.
+
+# Creating a `TileDBArray`
+
+Creating a `TileDBArray` is as easy as:
+
+```{r}
+X <- matrix(rnorm(1000), ncol=10)
+library(TileDBArray)
+writeTileDBArray(X)
+```
+
+Alternatively, we can use coercion methods:
+
+```{r}
+library(TileDBArray)
+as(X, "TileDBArray")
+```
+
+This process works also for sparse matrices:
+
+```{r}
+Y <- Matrix::rsparsematrix(1000, 1000, density=0.01)
+writeTileDBArray(Y)
+```
+
+Logical and integer matrices are supported:
+
+```{r}
+writeTileDBArray(Y > 0)
+```
+
+As are matrices with dimension names:
+
+```{r}
+rownames(X) <- sprintf("GENE_%i", seq_len(nrow(X)))
+colnames(X) <- sprintf("SAMP_%i", seq_len(ncol(X)))
+writeTileDBArray(X)
+```
+
+# Manipulating `TileDBArray`s
+
+`TileDBArray`s are simply `DelayedArray` objects and can be manipulated as such.
+The usual conventions for extracting data from matrix-like objects work as expected:
+
+```{r}
+out <- as(X, "TileDBArray")
+dim(out)
+head(rownames(out))
+head(out[,1])
+```
+
+We can also perform manipulations like subsetting and arithmetic.
+Note that these operations do not affect the data in the TileDB backend;
+rather, they are delayed until the values are explicitly required, 
+hence the creation of the `DelayedMatrix` object.
+
+```{r}
+out[1:5,1:5] 
+out * 2
+```
+
+We can also do more complex matrix operations that are supported by `r Biocpkg("DelayedArray")`:
+
+```{r}
+colSums(out)
+out %*% runif(ncol(out))
+```
+
+# Controlling backend creation
+
+We can adjust some parameters for creating the backend with appropriate arguments to `writeTileDBArray()`.
+For example, the example below allows us to control the path to the backend 
+as well as the name of the attribute containing the data.
+
+```{r}
+X <- matrix(rnorm(1000), ncol=10)
+path <- tempfile()
+writeTileDBArray(X, path=path, attr="WHEE")
+```
+
+As these arguments cannot be passed during coercion, 
+we instead provide global variables that can be set or unset to affect the outcome.
+
+```{r}
+path2 <- tempfile()
+setTileDBPath(path2)
+as(X, "TileDBArray") # uses path2 to store the backend.
+```
+
+# Session information
+
+```{r}
+sessionInfo()
+```
