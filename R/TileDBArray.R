@@ -57,6 +57,8 @@ NULL
 
 #' @export
 #' @importFrom tiledb domain schema tiledb_array is.sparse attrs datatype
+#' tiledb_array_open tiledb_dense tiledb_sparse tiledb_array_close
+#' tiledb_get_metadata
 TileDBArraySeed <- function(x, attr) { 
     if (is(x, "TileDBArraySeed")) {
         return(x)
@@ -76,13 +78,27 @@ TileDBArraySeed <- function(x, attr) {
     }
     
     type <- datatype(a[[attr]])
-    m <- match(type, .type.mapping)
-    if (is.na(m)) {
+    my.type <- .rev.type.mapping[type]
+    if (is.na(my.type)) {
         stop("'attr' refers to an unsupported type")
+    }
+    
+    if (my.type=="integer") {
+        if (is.sparse(s)) {
+            obj2 <- tiledb_sparse(x, attrs=attr)
+        } else {
+            obj2 <- tiledb_dense(x, attrs=attr)
+        }
+        obj2 <- tiledb_array_open(obj2, "READ") # not sure why it doesn't work with query_type="READ".
+        on.exit(tiledb_array_close(obj2), add=TRUE)
+
+        if (identical("logical", tiledb_get_metadata(obj2, "type"))) {
+            my.type <- "logical"
+        }
     }
 
     new("TileDBArraySeed", dim=d, dimnames=vector("list", length(d)), path=x, 
-        sparse=is.sparse(s), attr=attr, type=names(.type.mapping)[m])
+        sparse=is.sparse(s), attr=attr, type=my.type)
 }
 
 #' @importFrom S4Vectors setValidity2
@@ -230,6 +246,9 @@ setMethod("DelayedArray", "TileDBArraySeed",
     output <- array(fill, dim=lengths(usdex))
     for (i in seq_along(collected)) { 
         current <- collected[[i]]
+        if (is.logical(fill)) {
+            storage.mode(current$block) <- "logical"
+        }
         output <- do.call("[<-", c(list(x=output), current$relative, list(value=current$block)))
     }
 
@@ -249,6 +268,10 @@ setMethod("DelayedArray", "TileDBArraySeed",
         if (nrow(df)==0) next
 
         value <- df[,1]
+        if (is.logical(fill)) {
+            storage.mode(value) <- "logical"
+        }
+
         m <- mapply(match, x=as.list(df[,1L + seq_len(ncol(df)-1L)]), table=usdex)
         output[m] <- value
     }

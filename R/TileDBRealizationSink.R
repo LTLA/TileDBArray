@@ -5,8 +5,8 @@
 #' @section Writing a TileDBArray:
 #' \code{writeTileDBArray(x, ...)} writes the matrix-like object \code{x} to a TileDB backend.
 #' returning a \linkS4class{TileDBArray} object referring to that resource.
-#' Arguments in \code{...} are passed to \code{TileDBRealizationSink} to configure the TileDB representation
-#' and include \code{path}, \code{sparse}, \code{tile} and \code{ctx}.
+#' Arguments in \code{...} are passed to \code{TileDBRealizationSink} to configure the TileDB representation;
+#' all arguments listed below aside from \code{dim} and \code{type} are applicable.
 #'
 #' \code{TileDBRealizationSink(dim, type="double", path=NULL, sparse=FALSE, tile=100L, ctx=NULL)}
 #' returns a TileDBRealizationSink object that can be used to write content to a TileDB backend.
@@ -17,6 +17,7 @@
 #' Currently only numeric, logical and integer arrays are supported.
 #' \item \code{path}, a string containing the location of the new TileDB backend.
 #' Defaults to a temporary directory if not specified.
+#' \item \code{attr}, a string specifying the name of the attribute to store.
 #' \item \code{sparse} is a logical scalar indicating whether the array should be stored in sparse form.
 #' \item \code{tile} is an integer scalar or vector specifying the tile extent for each dimension,
 #' roughly interpreted as the size of chunks used for reading/writing the resource.
@@ -41,6 +42,17 @@
 #' path <- tempfile()
 #' out <- writeTileDBArray(X, path=path)
 #'
+#' # Works for integer matrices.
+#' Xi <- matrix(rpois(100000, 2), ncol=200)
+#' pathi <- tempfile()
+#' outi <- writeTileDBArray(Xi, path=pathi)
+#'
+#' # Works for logical matrices.
+#' Xl <- matrix(rpois(100000, 0.5) > 0, ncol=200)
+#' pathl <- tempfile()
+#' outl <- writeTileDBArray(Xl, path=pathl)
+#'
+#' # Works for sparse matrices.
 #' Y <- Matrix::rsparsematrix(1000, 1000, density=0.01)
 #' path2 <- tempfile()
 #' out2 <- writeTileDBArray(Y, path=path2, sparse=TRUE)
@@ -61,7 +73,9 @@ NULL
 #' @export
 #' @importFrom tiledb tiledb_domain tiledb_dim tiledb_ctx
 #' tiledb_array_schema tiledb_attr tiledb_array_create
-TileDBRealizationSink <- function(dim, type="double", sparse=FALSE, path=NULL, attr="x", tile=100L, ctx=NULL) {
+#' tiledb_dense tiledb_sparse tiledb_array_close
+#' tiledb_put_metadata tiledb_array_open
+TileDBRealizationSink <- function(dim, type="double", path=NULL, attr="x", sparse=FALSE, tile=100L, ctx=NULL) {
     if (is.null(ctx)) {
         ctx <- tiledb_ctx()
     }
@@ -86,6 +100,18 @@ TileDBRealizationSink <- function(dim, type="double", sparse=FALSE, path=NULL, a
 
     tiledb_array_create(path, schema)
 
+    # Need to keep track of the differences between INTs and LGLs.
+    if (type=="logical") {
+        if (sparse) {
+            obj <- tiledb_sparse(path, attrs=attr)
+        } else {
+            obj <- tiledb_dense(path, attrs=attr)
+        }
+        obj <- tiledb_array_open(obj, "WRITE") # not sure why it doesn't work with query_type="WRITE".
+        on.exit(tiledb_array_close(obj))
+        tiledb_put_metadata(obj, "type", type)
+    }
+
     new("TileDBRealizationSink", dim=dim, type=type, path=path, sparse=sparse, attr=attr)
 }
 
@@ -100,6 +126,11 @@ setValidity2("TileDBRealizationSink", function(object) {
 })
 
 .type.mapping <- c(double="FLOAT64", integer="INT32", logical="INT32")
+
+.rev.type.mapping <- c(
+    FLOAT64="double", FLOAT32="double", UINT32="double", INT64="double", UINT64="double",
+    INT32="integer", INT16="integer", INT8="integer", UINT8="integer", UINT16="integer"
+)
 
 #' @export
 #' @importFrom DelayedArray write_block
