@@ -3,12 +3,13 @@
 #' Write array data to a TileDB backend via \pkg{DelayedArray}'s \linkS4class{RealizationSink} machinery.
 #'
 #' @section Writing a TileDBArray:
-#' \code{writeTileDBArray(x, ...)} writes the matrix-like object \code{x} to a TileDB backend.
-#' returning a \linkS4class{TileDBArray} object referring to that resource.
+#' \code{writeTileDBArray(x, ...)} writes the matrix-like object \code{x} to a TileDB backend,
+#' returning a \linkS4class{TileDBArray} object referring to that backend. 
 #' Arguments in \code{...} are passed to \code{TileDBRealizationSink} to configure the TileDB representation;
 #' all arguments listed below aside from \code{dim} and \code{type} are applicable.
 #'
-#' \code{TileDBRealizationSink(dim, type="double", path=NULL, sparse=FALSE, tile=100L, ctx=NULL)}
+#' \code{TileDBRealizationSink(dim, type="double", path=getTileDBPath(), attr=getTileDBAttr(), 
+#' sparse=getTileDBSparse(), extent=getTileDBExtent(), context=getTileDBContext())}
 #' returns a TileDBRealizationSink object that can be used to write content to a TileDB backend.
 #' It accepts the following arguments:
 #' \itemize{
@@ -16,12 +17,11 @@
 #' \item \code{type}, a string specifying the data type.
 #' Currently only numeric, logical and integer arrays are supported.
 #' \item \code{path}, a string containing the location of the new TileDB backend.
-#' Defaults to a temporary directory if not specified.
 #' \item \code{attr}, a string specifying the name of the attribute to store.
 #' \item \code{sparse} is a logical scalar indicating whether the array should be stored in sparse form.
-#' \item \code{tile} is an integer scalar or vector specifying the tile extent for each dimension,
-#' roughly interpreted as the size of chunks used for reading/writing the resource.
-#' \item \code{ctx} is the TileDB context, defaulting to the output of \code{\link{tiledb_ctx}()}.
+#' \item \code{extent} is an integer scalar (or vector of length equal to \code{dim})
+#' specifying the tile extent for each dimension.
+#' \item \code{context} is the TileDB context, defaulting to the output of \code{\link{tiledb_ctx}()}.
 #' }
 #'
 #' @section Coercing to a TileDBArray:
@@ -75,28 +75,24 @@ NULL
 #' tiledb_array_schema tiledb_attr tiledb_array_create
 #' tiledb_dense tiledb_sparse tiledb_array_close
 #' tiledb_put_metadata tiledb_array_open
-TileDBRealizationSink <- function(dim, type="double", path=NULL, attr="x", sparse=FALSE, tile=100L, ctx=NULL) {
-    if (is.null(ctx)) {
-        ctx <- tiledb_ctx()
-    }
-    if (is.null(path)) {
-        path <- tempfile()
-    }
-
+TileDBRealizationSink <- function(dim, type="double", path=getTileDBPath(), 
+    attr=getTileDBAttr(), sparse=getTileDBSparse(), extent=getTileDBExtent(), 
+    context=getTileDBContext())
+{
     val <- .type.mapping[type]
     if (is.na(val)) {
         stop("'type' not supported")
     }
 
     collected <- vector("list", length(dim))
-    tile <- rep(as.integer(tile), length(dim))
+    extent <- rep(as.integer(extent), length(dim))
     for (i in seq_along(dim)) {
-        collected[[i]] <- tiledb_dim(ctx=ctx, paste0("d", i), c(1L, dim[i]), tile[i], "INT32")
+        collected[[i]] <- tiledb_dim(ctx=context, paste0("d", i), c(1L, dim[i]), extent[i], "INT32")
     }
-    dom <- tiledb_domain(ctx=ctx, dims=collected)
+    dom <- tiledb_domain(ctx=context, dims=collected)
 
-    schema <- tiledb_array_schema(ctx=ctx, dom, sparse=sparse,
-        attrs=list(tiledb_attr(ctx=ctx, attr, type=val)))
+    schema <- tiledb_array_schema(ctx=context, dom, sparse=sparse,
+        attrs=list(tiledb_attr(ctx=context, attr, type=val)))
 
     tiledb_array_create(path, schema)
 
