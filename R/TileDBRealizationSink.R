@@ -97,22 +97,31 @@ TileDBRealizationSink <- function(dim, type="double", sparse=FALSE, path=NULL, t
 #' @importFrom DelayedArray write_block
 #' @importFrom IRanges start
 #' @importFrom BiocGenerics width
-#' @importFrom tiledb tiledb_dense tiledb_sparse tiledb_array_close
+#' @importFrom tiledb tiledb_dense tiledb_array tiledb_array_close
+#' @importFrom Matrix which
 setMethod("write_block", "TileDBRealizationSink", function(x, viewport, block) {
+    starts <- start(viewport) - 1L
+
     if (x@sparse) {
-        obj <- tiledb_sparse(x@path, query_type="WRITE")
+        obj <- tiledb_array(x@path, query_type="WRITE")
+        on.exit(tiledb_array_close(obj))
+
+        idx <- which(block!=0, arr.ind=TRUE)
+        obj[] <- data.frame(
+            d1=idx[,1] + starts[1],
+            d2=idx[,2] + starts[2],
+            x=block[idx]
+        )
+
     } else {
         obj <- tiledb_dense(x@path, query_type="WRITE")
+        on.exit(tiledb_array_close(obj))
+
+        args <- lapply(width(viewport), seq_len)
+        args <- mapply(FUN="+", starts, args, SIMPLIFY=FALSE)
+        args <- c(list(x=obj), args, list(value=block))
+        do.call("[<-", args)
     }
-    on.exit(tiledb_array_close(obj))
-
-    args <- lapply(width(viewport), seq_len)
-    args <- mapply(FUN="+", start(viewport) - 1L, args, SIMPLIFY=FALSE)
-
-    args <- c(list(x=obj), args, list(value=block))
-
-    # This does the assignment.
-    do.call("[<-", args)
 
     NULL
 })
