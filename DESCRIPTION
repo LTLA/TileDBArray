@@ -3,11 +3,17 @@ Version: 0.0.1
 Title: Using TileDB as a DelayedArray Backend
 Description: Implements a set of DelayedArray backends for the TileDB 
     dense/sparse array storage framework.
+Depends:
+    DelayedArray
 Imports: 
     methods, 
     tiledb, 
     BiocGenerics,
     IRanges,
-    DelayedArray,
     base64enc
+Suggests:
+    knitr,
+    rmarkdown,
+    BiocStyle,
+    Matrix
 RoxygenNote: 7.1.0
