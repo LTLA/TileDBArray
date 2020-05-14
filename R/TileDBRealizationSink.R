@@ -3,17 +3,25 @@
 #' Write array data to a TileDB backend via \pkg{DelayedArray}'s \linkS4class{RealizationSink} machinery.
 #'
 #' @section Writing a TileDBArray:
-#' \code{writeTileDBArray(x, path=NULL, tile=100L, ctx=NULL)} writes the matrix-like object \code{x} to 
-#' a TileDB resource at \code{path} (defaulting to a temporary directory if not specified).
-#' \code{tile} specifies the tile extent and \code{ctx} is the TileDB context
-#' (defaulting to the output of \code{\link{tiledb_ctx}()}).
-#' It returns a \linkS4class{TileDBArray} object referring to \code{path}.
+#' \code{writeTileDBArray(x, ...)} writes the matrix-like object \code{x} to a TileDB backend.
+#' returning a \linkS4class{TileDBArray} object referring to that resource.
+#' Arguments in \code{...} are passed to \code{TileDBRealizationSink} to configure the TileDB representation
+#' and include \code{path}, \code{sparse}, \code{tile} and \code{ctx}.
 #'
-#' \code{TileDBRealizationSink(dim, type="double", path=NULL, tile=100L, ctx=NULL)}
-#' defines the realization sink for \pkg{DelayedArray} writing machinery.
-#' The arguments are as defined above but with the additional \code{dim} to specify the array dimensions
-#' and \code{type} to specify the data type.
+#' \code{TileDBRealizationSink(dim, type="double", path=NULL, sparse=FALSE, tile=100L, ctx=NULL)}
+#' returns a TileDBRealizationSink object that can be used to write content to a TileDB backend.
+#' It accepts the following arguments:
+#' \itemize{
+#' \item \code{dim}, an integer vector (usually of length 2) to specify the array dimensions.
+#' \item \code{type}, a string specifying the data type.
 #' Currently only numeric, logical and integer arrays are supported.
+#' \item \code{path}, a string containing the location of the new TileDB backend.
+#' Defaults to a temporary directory if not specified.
+#' \item \code{sparse} is a logical scalar indicating whether the array should be stored in sparse form.
+#' \item \code{tile} is an integer scalar or vector specifying the tile extent for each dimension,
+#' roughly interpreted as the size of chunks used for reading/writing the resource.
+#' \item \code{ctx} is the TileDB context, defaulting to the output of \code{\link{tiledb_ctx}()}.
+#' }
 #'
 #' @section Coercing to a TileDBArray:
 #' \code{as(x, "TileDBArray")} will coerce a matrix-like object \code{x} to a TileDBArray object.
@@ -33,8 +41,19 @@
 #' path <- tempfile()
 #' out <- writeTileDBArray(X, path=path)
 #'
+#' Y <- Matrix::rsparsematrix(1000, 1000, density=0.01)
+#' path2 <- tempfile()
+#' out2 <- writeTileDBArray(Y, path=path2, sparse=TRUE)
+#' 
 #' @aliases
+#' writeTileDBArray
 #' TileDBRealizationSink
+#' coerce,TileDBRealizationSink,TileDBMatrix-method
+#' coerce,TileDBRealizationSink,TileDBArray-method
+#' coerce,TileDBRealizationSink,DelayedArray-method
+#' coerce,ANY,TileDBArray-method
+#' coerce,ANY,TileDBMatrix-method
+#' coerce,ANY,TileDBRealizationSink-method
 #'
 #' @name TileDBRealizationSink
 NULL
@@ -42,7 +61,7 @@ NULL
 #' @export
 #' @importFrom tiledb tiledb_domain tiledb_dim tiledb_ctx
 #' tiledb_array_schema tiledb_attr tiledb_array_create
-TileDBRealizationSink <- function(dim, type="double", path=NULL, tile=100L, ctx=NULL) {
+TileDBRealizationSink <- function(dim, type="double", sparse=FALSE, path=NULL, tile=100L, ctx=NULL) {
     if (is.null(ctx)) {
         ctx <- tiledb_ctx()
     }
@@ -64,11 +83,12 @@ TileDBRealizationSink <- function(dim, type="double", path=NULL, tile=100L, ctx=
 
     # The array will be dense with a single attribute "a" 
     # so each cell can store an integer.
-    schema <- tiledb_array_schema(ctx=ctx, dom, attrs=list(tiledb_attr(ctx=ctx, "x", type=val)))
+    schema <- tiledb_array_schema(ctx=ctx, dom, sparse=sparse,
+        attrs=list(tiledb_attr(ctx=ctx, "x", type=val)))
 
     tiledb_array_create(path, schema)
 
-    new("TileDBRealizationSink", dim=dim, type=type, path=path)
+    new("TileDBRealizationSink", dim=dim, type=type, path=path, sparse=sparse)
 }
 
 .type.mapping <- c(double="FLOAT64", integer="INT32", logical="INT32")
@@ -77,9 +97,13 @@ TileDBRealizationSink <- function(dim, type="double", path=NULL, tile=100L, ctx=
 #' @importFrom DelayedArray write_block
 #' @importFrom IRanges start
 #' @importFrom BiocGenerics width
-#' @importFrom tiledb tiledb_array tiledb_array_close
+#' @importFrom tiledb tiledb_dense tiledb_sparse tiledb_array_close
 setMethod("write_block", "TileDBRealizationSink", function(x, viewport, block) {
-    obj <- tiledb_dense(x@path, query_type="WRITE")
+    if (x@sparse) {
+        obj <- tiledb_sparse(x@path, query_type="WRITE")
+    } else {
+        obj <- tiledb_dense(x@path, query_type="WRITE")
+    }
     on.exit(tiledb_array_close(obj))
 
     args <- lapply(width(viewport), seq_len)

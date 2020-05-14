@@ -1,5 +1,5 @@
 #' @export
-setClass("TileDBArraySeed", slots=c(dim="integer", dimnames="list", path="character"))
+setClass("TileDBArraySeed", slots=c(dim="integer", dimnames="list", path="character", sparse="logical"))
 
 #' @export
 #' @importClassesFrom DelayedArray DelayedMatrix
@@ -13,5 +13,5 @@ setClass("TileDBMatrix", contains="DelayedMatrix", slots=c(seed="TileDBArraySeed
 #' @importClassesFrom DelayedArray RealizationSink
 setClass("TileDBRealizationSink",
     contains="RealizationSink",
-    slots=c(dim="integer", type="character", path="character")
+    slots=c(dim="integer", type="character", path="character", sparse="logical")
 )

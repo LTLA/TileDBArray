@@ -52,17 +52,19 @@
 #' @name TileDBArray
 NULL
 
-#' @importFrom tiledb domain schema tiledb_array
+#' @export
+#' @importFrom tiledb domain schema tiledb_array is.sparse
 TileDBArraySeed <- function(x) { 
     if (is(x, "TileDBArraySeed")) {
         return(x)
     }
 
-    x <- tiledb_array(path)
-    on.exit(tiledb_array_close(x))
+    obj <- tiledb_array(x)
+    on.exit(tiledb_array_close(obj))
 
-    d <- dim(domain(schema(x)))
-    new("TileDBArraySeed", dim=d, dimnames=vector("list", length(d)), path=path)
+    s <- schema(obj)
+    d <- dim(domain(s))
+    new("TileDBArraySeed", dim=d, dimnames=vector("list", length(d)), path=x, sparse=is.sparse(s))
 }
 
 #' @export
@@ -72,8 +74,13 @@ setMethod("show", "TileDBArraySeed", function(object) {
 })
 
 #' @export
+#' @importFrom DelayedArray is_sparse
+setMethod("is_sparse", "TileDBArraySeed", function(x) x@sparse)
+
+#' @export
 #' @importFrom DelayedArray extract_array
-#' @importFrom tiledb tiledb_dense
+#' @importFrom tiledb tiledb_dense tiledb_sparse tiledb_array_close
+#' @importFrom Matrix sparseMatrix
 setMethod("extract_array", "TileDBArraySeed", function(x, index) {
     d <- dim(x)
     for (i in seq_along(index)) {
@@ -87,8 +94,12 @@ setMethod("extract_array", "TileDBArraySeed", function(x, index) {
     }
 
     # Figuring out what type of array it is.
-    x <- tiledb_dense(x@path, query_type="READ")
-    on.exit(tiledb_array_close(x))
+    if (is_sparse(x)) {
+        obj <- tiledb_sparse(x@path, query_type="READ", as.data.frame=TRUE)
+    } else {
+        obj <- tiledb_dense(x@path, query_type="READ")
+    }
+    on.exit(tiledb_array_close(obj))
 
     # Hack to overcome non-contiguous subset error.
     o <- order(d2)
@@ -109,7 +120,7 @@ setMethod("extract_array", "TileDBArraySeed", function(x, index) {
         cur.end <- re.o[all.ends[i]]
 
         full[[least]] <- cur.start:cur.end
-        tmp <- do.call(`[`, c(list(x), full, list(drop=FALSE)))
+        tmp <- do.call(`[`, c(list(obj), full, list(drop=FALSE)))
 
         index[[least]] <- seq_len(cur.end-cur.start+1L)
         tmp <- do.call(`[`, c(list(tmp), index, list(drop=FALSE)))
@@ -117,14 +128,19 @@ setMethod("extract_array", "TileDBArraySeed", function(x, index) {
     }
 
     # TODO: generalize to arrays.
-    if (least==1L) {
-        out <- do.call(rbind, collected)
-        out <- out[match(least.index, re.o),,drop=FALSE]
+    if (is_sparse(x)) {
+        all.collected <- do.call(rbind, collected)
+        out <- sparseMatrix(i=all.collected$d1, j=all.collected$d2, x=collected$x)
+        as.matrix(out)
     } else {
-        out <- do.call(cbind, collected)
-        out <- out[,match(least.index, re.o),drop=FALSE]
+        if (least==1L) {
+            out <- do.call(rbind, collected)
+            out[match(least.index, re.o),,drop=FALSE]
+        } else {
+            out <- do.call(cbind, collected)
+            out[,match(least.index, re.o),drop=FALSE]
+        }
     }
-    out
 })
 
 #' @export
