@@ -3,12 +3,11 @@
 #' The TileDBArray class provides a \linkS4class{DelayedArray} backend for TileDB arrays (sparse and dense).
 #'
 #' @section Constructing a TileDBArray:
-#' \code{TileDBArray(x, ...)} yields a TileDBArray object
+#' \code{TileDBArray(x)} returns a TileDBArray object
 #' given \code{x}, a URI path to the dense array (e.g., a directory).
-#' Further arguments can be passed to \code{\link{tiledb_dense}} via \code{...}.
 #' Alternatively, \code{x} can be a TileDBArraySeed object.
 #'
-#' \code{TileDBArraySeed(x, ...)} yields a TileDBArraySeed
+#' \code{TileDBArraySeed(x)} returns a TileDBArraySeed
 #' with the same arguments as described for \code{TileDBArray}.
 #' If \code{x} is already a TileDBArraySeed, it is returned
 #' directly without further modification.
@@ -78,6 +77,10 @@ setMethod("show", "TileDBArraySeed", function(object) {
 setMethod("is_sparse", "TileDBArraySeed", function(x) x@sparse)
 
 #' @export
+#' @importFrom DelayedArray is_sparse
+setMethod("type", "TileDBArraySeed", function(x) "double") # FIX.
+
+#' @export
 #' @importFrom DelayedArray extract_array
 #' @importFrom tiledb tiledb_dense tiledb_sparse tiledb_array_close
 #' @importFrom Matrix sparseMatrix
@@ -87,10 +90,13 @@ setMethod("extract_array", "TileDBArraySeed", function(x, index) {
         if (is.null(index[[i]])) index[[i]] <- seq_len(d[i])
     }
 
+    # Set fill to zero so that it behaves properly with sparse extraction.
+    fill <- switch(type(x), double=0, integer=0L, logical=FALSE)
+
     # Hack to overcome zero-length indices.
     d2 <- lengths(index)
     if (any(d2==0L)) {
-        return(array(numeric(0), dim=d2))
+        return(array(rep(fill, 0L), dim=d2))
     }
 
     # Figuring out what type of array it is.
@@ -101,45 +107,10 @@ setMethod("extract_array", "TileDBArraySeed", function(x, index) {
     }
     on.exit(tiledb_array_close(obj))
 
-    # Hack to overcome non-contiguous subset error.
-    o <- order(d2)
-    least <- o[1]
-    least.index <- index[[least]]
-
-    re.o <- unique(sort(least.index))
-    diff.from.last <- which(diff(re.o)!=1L)
-    all.starts <- c(1L, diff.from.last+1L)
-    all.ends <- c(diff.from.last, length(re.o))
-
-    full <- lapply(d, seq_len)
-    collected <- vector("list", length(all.starts))
-    index[[least]] <- seq_along(re.o)
-
-    for (i in seq_along(all.starts)) {
-        cur.start <- re.o[all.starts[i]]
-        cur.end <- re.o[all.ends[i]]
-
-        full[[least]] <- cur.start:cur.end
-        tmp <- do.call(`[`, c(list(obj), full, list(drop=FALSE)))
-
-        index[[least]] <- seq_len(cur.end-cur.start+1L)
-        tmp <- do.call(`[`, c(list(tmp), index, list(drop=FALSE)))
-        collected[[i]] <- tmp
-    }
-
-    # TODO: generalize to arrays.
     if (is_sparse(x)) {
-        all.collected <- do.call(rbind, collected)
-        out <- sparseMatrix(i=all.collected$d1, j=all.collected$d2, x=collected$x)
-        as.matrix(out)
+        .extract_noncontiguous_sparse(obj, index, fill)
     } else {
-        if (least==1L) {
-            out <- do.call(rbind, collected)
-            out[match(least.index, re.o),,drop=FALSE]
-        } else {
-            out <- do.call(cbind, collected)
-            out[,match(least.index, re.o),drop=FALSE]
-        }
+        .extract_noncontiguous_dense(obj, index, fill)
     }
 })
 
@@ -154,3 +125,95 @@ TileDBArray <- function(x, ..., query_type="READ") {
 setMethod("DelayedArray", "TileDBArraySeed",
     function(seed) new_DelayedArray(seed, Class="TileDBMatrix")
 )
+
+#######################################################
+# Hacks to get around tiledb's interface limitations. #
+#######################################################
+
+.get_contiguous <- function(obj, index) {
+    ndim <- length(index)
+    new.starts <- new.ends <- cum.width <- usdex <- vector("list", ndim)
+
+    # Identifying all contiguous unique stretches.
+    for (i in seq_len(ndim)) {
+        cur.index <- index[[i]]
+        re.o <- unique(sort(cur.index))
+        usdex[[i]] <- re.o
+
+        diff.from.last <- which(diff(re.o)!=1L)
+        all.starts <- c(1L, diff.from.last+1L)
+        all.ends <- c(diff.from.last, length(re.o))
+
+        new.starts[[i]] <- all.starts
+        new.ends[[i]] <- all.ends
+    }
+
+    # Looping across them to extract every possible combination.
+    collected <- list()
+    current <- rep(1L, ndim)
+    totals <- lengths(new.starts)
+
+    repeat {
+        absolute <- relative <- vector("list", ndim)
+        for (i in seq_len(ndim)) {
+            j <- current[i]
+            relative[[i]] <- new.starts[[i]][j]:new.ends[[i]][j]
+            absolute[[i]] <- usdex[[i]][relative[[i]]]
+        }
+
+        # Because tiledb_sparse just errors if there are no entries.
+        block <- try(do.call("[", c(list(x=obj), absolute, list(drop=FALSE))), silent=TRUE)
+        if (!is(block, "try-error")) {
+            collected[[length(collected)+1L]] <- list(relative=relative, block=block)
+        }
+
+        finished <- TRUE 
+        for (i in seq_len(ndim)) {
+            current[i] <- current[i] + 1L
+            if (current[i] <= totals[i]) {
+                finished <- FALSE
+                break
+            } else {
+                current[i] <- 1L
+            }
+        }
+        if (finished) break
+    }
+
+    list(collected=collected, usdex=usdex)
+}
+
+.extract_noncontiguous_dense <- function(obj, index, fill) {
+    contig <- .get_contiguous(obj, index)
+    collected <- contig$collected
+    usdex <- contig$usdex
+
+    output <- array(fill, dim=lengths(usdex))
+    for (i in seq_along(collected)) { 
+        current <- collected[[i]]
+        output <- do.call("[<-", c(list(x=output), current$relative, list(value=current$block)))
+    }
+
+    m <- mapply(match, x=index, table=usdex, SIMPLIFY=FALSE)
+    do.call("[", c(list(x=output), m, list(drop=FALSE)))
+}
+
+.extract_noncontiguous_sparse <- function(obj, index, fill) {
+    contig <- .get_contiguous(obj, index)
+    collected <- contig$collected
+    usdex <- contig$usdex
+
+    output <- array(fill, dim=lengths(usdex))
+    for (i in seq_along(collected)) { 
+        current <- collected[[i]]
+        df <- current$block
+        if (nrow(df)==0) next
+
+        value <- df[,1]
+        m <- mapply(match, x=as.list(df[,1L + seq_len(ncol(df)-1L)]), table=usdex)
+        output[m] <- value
+    }
+
+    m <- mapply(match, x=index, table=usdex, SIMPLIFY=FALSE)
+    do.call("[", c(list(x=output), m, list(drop=FALSE)))
+}
