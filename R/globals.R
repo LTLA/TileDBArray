@@ -107,7 +107,6 @@ setTileDBExtent <- function(extent=NULL) {
 }
 
 #' @export
-#' @importFrom tiledb tiledb_ctx
 getTileDBContext <- function() {
     if (is.null(context <- .globals$get("context"))) {
         tiledb_ctx()

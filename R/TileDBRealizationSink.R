@@ -52,10 +52,14 @@
 #' pathl <- tempfile()
 #' outl <- writeTileDBArray(Xl, path=pathl)
 #'
-#' # Works for sparse matrices.
+#' # Works for sparse numeric matrices.
 #' Y <- Matrix::rsparsematrix(1000, 1000, density=0.01)
 #' path2 <- tempfile()
 #' out2 <- writeTileDBArray(Y, path=path2, sparse=TRUE)
+#'
+#' # And for sparse logical matrices.
+#' path2l <- tempfile()
+#' out2l <- writeTileDBArray(Y > 0, path=path2l, sparse=TRUE)
 #' 
 #' @aliases
 #' writeTileDBArray
@@ -71,10 +75,6 @@
 NULL
 
 #' @export
-#' @importFrom tiledb tiledb_domain tiledb_dim tiledb_ctx
-#' tiledb_array_schema tiledb_attr tiledb_array_create
-#' tiledb_dense tiledb_sparse tiledb_array_close
-#' tiledb_put_metadata tiledb_array_open
 TileDBRealizationSink <- function(dim, type="double", path=getTileDBPath(), 
     attr=getTileDBAttr(), sparse=getTileDBSparse(), extent=getTileDBExtent(), 
     context=getTileDBContext())
@@ -129,11 +129,8 @@ setValidity2("TileDBRealizationSink", function(object) {
 )
 
 #' @export
-#' @importFrom DelayedArray write_block
 #' @importFrom IRanges start
 #' @importFrom BiocGenerics width
-#' @importFrom tiledb tiledb_dense tiledb_array tiledb_array_close
-#' @importFrom Matrix which
 setMethod("write_block", "TileDBRealizationSink", function(x, viewport, block) {
     starts <- start(viewport) - 1L
 
@@ -162,11 +159,9 @@ setMethod("write_block", "TileDBRealizationSink", function(x, viewport, block) {
 })
 
 #' @export
-#' @importFrom DelayedArray type
 setMethod("type", "TileDBRealizationSink", function(x) x@type)
 
 #' @export
-#' @importFrom DelayedArray type BLOCK_write_to_sink
 writeTileDBArray <- function(x, path=NULL, ...) {
     sink <- TileDBRealizationSink(dim(x), type=type(x), path=path, ...)
     BLOCK_write_to_sink(x, sink)
@@ -174,19 +169,16 @@ writeTileDBArray <- function(x, path=NULL, ...) {
 }
 
 #' @export
-#' @importFrom DelayedArray DelayedArray
 setAs("TileDBRealizationSink", "TileDBArraySeed",
     function(from) TileDBArraySeed(from@path)
 )
 
 #' @export
-#' @importFrom DelayedArray DelayedArray
 setAs("TileDBRealizationSink", "TileDBArray",
     function(from) DelayedArray(as(from, "TileDBArraySeed"))
 )
 
 #' @export
-#' @importFrom DelayedArray DelayedArray
 setAs("TileDBRealizationSink", "DelayedArray",
     function(from) DelayedArray(as(from, "TileDBArraySeed"))
 )

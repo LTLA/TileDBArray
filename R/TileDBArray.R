@@ -56,9 +56,6 @@
 NULL
 
 #' @export
-#' @importFrom tiledb domain schema tiledb_array is.sparse attrs datatype
-#' tiledb_array_open tiledb_dense tiledb_sparse tiledb_array_close
-#' tiledb_get_metadata
 TileDBArraySeed <- function(x, attr) { 
     if (is(x, "TileDBArraySeed")) {
         return(x)
@@ -128,16 +125,12 @@ setMethod("show", "TileDBArraySeed", function(object) {
 })
 
 #' @export
-#' @importFrom DelayedArray is_sparse
 setMethod("is_sparse", "TileDBArraySeed", function(x) x@sparse)
 
 #' @export
-#' @importFrom DelayedArray is_sparse
 setMethod("type", "TileDBArraySeed", function(x) x@type)
 
 #' @export
-#' @importFrom DelayedArray extract_array
-#' @importFrom tiledb tiledb_dense tiledb_sparse tiledb_array_close
 #' @importFrom Matrix sparseMatrix
 setMethod("extract_array", "TileDBArraySeed", function(x, index) {
     d <- dim(x)
@@ -170,13 +163,11 @@ setMethod("extract_array", "TileDBArraySeed", function(x, index) {
 })
 
 #' @export
-#' @importFrom DelayedArray DelayedArray
 TileDBArray <- function(x, ..., query_type="READ") {
     DelayedArray(TileDBArraySeed(x, ..., query_type=query_type))
 }
 
 #' @export
-#' @importFrom DelayedArray DelayedArray new_DelayedArray
 setMethod("DelayedArray", "TileDBArraySeed",
     function(seed) new_DelayedArray(seed, Class="TileDBMatrix")
 )
