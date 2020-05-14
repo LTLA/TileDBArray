@@ -85,6 +85,26 @@ TileDBArraySeed <- function(x, attr) {
         sparse=is.sparse(s), attr=attr, type=names(.type.mapping)[m])
 }
 
+#' @importFrom S4Vectors setValidity2
+setValidity2("TileDBArraySeed", function(object) {
+    msg <- .common_checks(object)
+
+    d <- dim(object)
+    dn <- dimnames(object)
+    if (length(dn)!=length(d)) {
+        msg <- c(msg, "'dimnames' must the same length as 'dim'")
+    }
+    if (!all(d==lengths(dn) | vapply(dn, is.null, FALSE))) {
+        msg <- c(msg, "each 'dimnames' must be NULL or the same length as the corresponding dimension")
+    }
+
+    if (length(msg)) {
+        msg
+    } else {
+        TRUE
+    }
+})
+
 #' @export
 #' @importFrom methods show
 setMethod("show", "TileDBArraySeed", function(object) {

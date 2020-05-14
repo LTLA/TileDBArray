@@ -14,5 +14,5 @@ setClass("TileDBMatrix", contains="DelayedMatrix", slots=c(seed="TileDBArraySeed
 #' @importClassesFrom DelayedArray RealizationSink
 setClass("TileDBRealizationSink",
     contains="RealizationSink",
-    slots=c(dim="integer", type="character", path="character", sparse="logical")
+    slots=c(dim="integer", type="character", path="character", attr="character", sparse="logical")
 )

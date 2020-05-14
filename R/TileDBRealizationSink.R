@@ -61,7 +61,7 @@ NULL
 #' @export
 #' @importFrom tiledb tiledb_domain tiledb_dim tiledb_ctx
 #' tiledb_array_schema tiledb_attr tiledb_array_create
-TileDBRealizationSink <- function(dim, type="double", sparse=FALSE, path=NULL, tile=100L, ctx=NULL) {
+TileDBRealizationSink <- function(dim, type="double", sparse=FALSE, path=NULL, attr="x", tile=100L, ctx=NULL) {
     if (is.null(ctx)) {
         ctx <- tiledb_ctx()
     }
@@ -81,15 +81,23 @@ TileDBRealizationSink <- function(dim, type="double", sparse=FALSE, path=NULL, t
     }
     dom <- tiledb_domain(ctx=ctx, dims=collected)
 
-    # The array will be dense with a single attribute "a" 
-    # so each cell can store an integer.
     schema <- tiledb_array_schema(ctx=ctx, dom, sparse=sparse,
-        attrs=list(tiledb_attr(ctx=ctx, "x", type=val)))
+        attrs=list(tiledb_attr(ctx=ctx, attr, type=val)))
 
     tiledb_array_create(path, schema)
 
-    new("TileDBRealizationSink", dim=dim, type=type, path=path, sparse=sparse)
+    new("TileDBRealizationSink", dim=dim, type=type, path=path, sparse=sparse, attr=attr)
 }
+
+#' @importFrom S4Vectors setValidity2
+setValidity2("TileDBRealizationSink", function(object) {
+    msg <- .common_checks(object)
+    if (length(msg)) {
+        msg
+    } else {
+        TRUE
+    }
+})
 
 .type.mapping <- c(double="FLOAT64", integer="INT32", logical="INT32")
 
@@ -103,7 +111,7 @@ setMethod("write_block", "TileDBRealizationSink", function(x, viewport, block) {
     starts <- start(viewport) - 1L
 
     if (x@sparse) {
-        obj <- tiledb_array(x@path, query_type="WRITE")
+        obj <- tiledb_array(x@path, attrs=x@attr, query_type="WRITE")
         on.exit(tiledb_array_close(obj))
 
         idx <- which(block!=0, arr.ind=TRUE)
@@ -114,7 +122,7 @@ setMethod("write_block", "TileDBRealizationSink", function(x, viewport, block) {
         )
 
     } else {
-        obj <- tiledb_dense(x@path, query_type="WRITE")
+        obj <- tiledb_dense(x@path, attrs=x@attr, query_type="WRITE")
         on.exit(tiledb_array_close(obj))
 
         args <- lapply(width(viewport), seq_len)
