@@ -3,11 +3,15 @@
 #' The TileDBArray class provides a \linkS4class{DelayedArray} backend for TileDB arrays (sparse and dense).
 #'
 #' @section Constructing a TileDBArray:
-#' \code{TileDBArray(x)} returns a TileDBArray object
-#' given \code{x}, a URI path to the dense array (e.g., a directory).
-#' Alternatively, \code{x} can be a TileDBArraySeed object.
+#' \code{TileDBArray(x, attr)} returns a TileDBArray object given:
+#' \itemize{
+#' \item \code{x}, a URI path to a TileDB backend, most typically a directory.
+#' \item \code{attr}, a string specifying the attribute to represent in the array.
+#' Defaults to the first attribute.
+#' }
+#' Alternatively, \code{x} can be a TileDBArraySeed object, in which case \code{attr} is ignored.
 #'
-#' \code{TileDBArraySeed(x)} returns a TileDBArraySeed
+#' \code{TileDBArraySeed(x, attr)} returns a TileDBArraySeed
 #' with the same arguments as described for \code{TileDBArray}.
 #' If \code{x} is already a TileDBArraySeed, it is returned
 #' directly without further modification.
@@ -52,8 +56,8 @@
 NULL
 
 #' @export
-#' @importFrom tiledb domain schema tiledb_array is.sparse
-TileDBArraySeed <- function(x) { 
+#' @importFrom tiledb domain schema tiledb_array is.sparse attrs datatype
+TileDBArraySeed <- function(x, attr) { 
     if (is(x, "TileDBArraySeed")) {
         return(x)
     }
@@ -63,7 +67,22 @@ TileDBArraySeed <- function(x) {
 
     s <- schema(obj)
     d <- dim(domain(s))
-    new("TileDBArraySeed", dim=d, dimnames=vector("list", length(d)), path=x, sparse=is.sparse(s))
+
+    a <- attrs(s)
+    if (missing(attr)) {
+        attr <- names(a)[1]
+    } else if (!attr %in% names(a)) {
+        stop("'attr' not in the TileDB attributes")
+    }
+    
+    type <- datatype(a[[attr]])
+    m <- match(type, .type.mapping)
+    if (is.na(m)) {
+        stop("'attr' refers to an unsupported type")
+    }
+
+    new("TileDBArraySeed", dim=d, dimnames=vector("list", length(d)), path=x, 
+        sparse=is.sparse(s), attr=attr, type=names(.type.mapping)[m])
 }
 
 #' @export
@@ -78,7 +97,7 @@ setMethod("is_sparse", "TileDBArraySeed", function(x) x@sparse)
 
 #' @export
 #' @importFrom DelayedArray is_sparse
-setMethod("type", "TileDBArraySeed", function(x) "double") # FIX.
+setMethod("type", "TileDBArraySeed", function(x) x@type)
 
 #' @export
 #' @importFrom DelayedArray extract_array
@@ -101,9 +120,9 @@ setMethod("extract_array", "TileDBArraySeed", function(x, index) {
 
     # Figuring out what type of array it is.
     if (is_sparse(x)) {
-        obj <- tiledb_sparse(x@path, query_type="READ", as.data.frame=TRUE)
+        obj <- tiledb_sparse(x@path, attrs=x@attr, query_type="READ", as.data.frame=TRUE)
     } else {
-        obj <- tiledb_dense(x@path, query_type="READ")
+        obj <- tiledb_dense(x@path, attrs=x@attr, query_type="READ")
     }
     on.exit(tiledb_array_close(obj))
 
