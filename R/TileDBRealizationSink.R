@@ -103,7 +103,8 @@ TileDBRealizationSink <- function(dim, dimnames=NULL, type="double", path=getTil
     collected <- vector("list", length(dim))
     extent <- rep(as.integer(extent), length(dim))
     for (i in seq_along(dim)) {
-        collected[[i]] <- tiledb_dim(ctx=context, paste0("d", i), c(1L, dim[i]), extent[i], "INT32")
+        ex <- min(extent[i], dim[i])
+        collected[[i]] <- tiledb_dim(ctx=context, paste0("d", i), c(1L, dim[i]), tile=ex, type="INT32")
     }
     dom <- tiledb_domain(ctx=context, dims=collected)
 
