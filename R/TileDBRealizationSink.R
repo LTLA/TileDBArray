@@ -64,8 +64,7 @@ TileDBRealizationSink <- function(dim, type="double", path=NULL, tile=100L, ctx=
 
     # The array will be dense with a single attribute "a" 
     # so each cell can store an integer.
-    schema <- tiledb_array_schema(ctx=ctx, dom, 
-        attrs=list(tiledb_attr(ctx=ctx, "x", type =val)))
+    schema <- tiledb_array_schema(ctx=ctx, dom, attrs=list(tiledb_attr(ctx=ctx, "x", type=val)))
 
     tiledb_array_create(path, schema)
 
@@ -84,7 +83,7 @@ setMethod("write_block", "TileDBRealizationSink", function(x, viewport, block) {
     on.exit(tiledb_array_close(obj))
 
     args <- lapply(width(viewport), seq_len)
-    args <- mapply(FUN="+", start(viewport) - 1L, args)
+    args <- mapply(FUN="+", start(viewport) - 1L, args, SIMPLIFY=FALSE)
 
     args <- c(list(x=obj), args, list(value=block))
 
@@ -103,34 +102,34 @@ setMethod("type", "TileDBRealizationSink", function(x) x@type)
 writeTileDBArray <- function(x, path=NULL, ...) {
     sink <- TileDBRealizationSink(dim(x), type=type(x), path=path, ...)
     BLOCK_write_to_sink(x, sink)
-    as(sink, "DenseTileDBArray")
+    as(sink, "TileDBArray")
 }
 
 #' @export
 #' @importFrom DelayedArray DelayedArray
-setAs("TileDBRealizationSink", "DenseTileDBArraySeed",
-    function(from) DenseTileDBArraySeed(from@path)
+setAs("TileDBRealizationSink", "TileDBArraySeed",
+    function(from) TileDBArraySeed(from@path)
 )
 
 #' @export
 #' @importFrom DelayedArray DelayedArray
-setAs("TileDBRealizationSink", "DenseTileDBArray",
-    function(from) DelayedArray(as(from, "DenseTileDBArraySeed"))
+setAs("TileDBRealizationSink", "TileDBArray",
+    function(from) DelayedArray(as(from, "TileDBArraySeed"))
 )
 
 #' @export
 #' @importFrom DelayedArray DelayedArray
 setAs("TileDBRealizationSink", "DelayedArray",
-    function(from) DelayedArray(as(from, "DenseTileDBArraySeed"))
+    function(from) DelayedArray(as(from, "TileDBArraySeed"))
 )
 
 .as_TileDBArray <- function(from) writeTileDBArray(from)
 
 #' @export
-setAs("ANY", "DenseTileDBArray", .as_TileDBArray)
+setAs("ANY", "TileDBArray", .as_TileDBArray)
 
 #' @export
-setAs("DelayedArray", "DenseTileDBArray", .as_TileDBArray)
+setAs("DelayedArray", "TileDBArray", .as_TileDBArray)
 
 #' @export
-setAs("DelayedMatrix", "DenseTileDBMatrix", .as_TileDBArray)
+setAs("DelayedMatrix", "TileDBMatrix", .as_TileDBArray)

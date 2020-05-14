@@ -1,6 +1,17 @@
 #' @export
-setClass("DenseTileDBArraySeed", slots=c(dim="integer", dimnames="list", .array="tiledb_dense"))
+setClass("TileDBArraySeed", slots=c(dim="integer", dimnames="list", path="character"))
 
 #' @export
 #' @importClassesFrom DelayedArray DelayedMatrix
-setClass("DenseTileDBMatrix", contains="DelayedMatrix", slots=c(seed="DenseTileDBArraySeed"))
+setClass("TileDBArray", contains="DelayedArray", slots=c(seed="TileDBArraySeed"))
+
+#' @export
+#' @importClassesFrom DelayedArray DelayedMatrix
+setClass("TileDBMatrix", contains="DelayedMatrix", slots=c(seed="TileDBArraySeed"))
+
+#' @export
+#' @importClassesFrom DelayedArray RealizationSink
+setClass("TileDBRealizationSink",
+    contains="RealizationSink",
+    slots=c(dim="integer", type="character", path="character")
+)
