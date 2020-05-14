@@ -80,22 +80,38 @@ TileDBArraySeed <- function(x, attr) {
         stop("'attr' refers to an unsupported type")
     }
     
-    if (my.type=="integer") {
-        if (is.sparse(s)) {
-            obj2 <- tiledb_sparse(x, attrs=attr)
-        } else {
-            obj2 <- tiledb_dense(x, attrs=attr)
-        }
-        obj2 <- tiledb_array_open(obj2, "READ") # not sure why it doesn't work with query_type="READ".
-        on.exit(tiledb_array_close(obj2), add=TRUE)
-
-        if (identical("logical", tiledb_get_metadata(obj2, "type"))) {
-            my.type <- "logical"
-        }
+    meta <- .get_metadata(x, attr, sparse=is.sparse(s))
+    if (my.type=="integer" && identical(meta$type, "logical")) {
+        my.type <- meta$type
     }
 
-    new("TileDBArraySeed", dim=d, dimnames=vector("list", length(d)), path=x, 
+    dimnames <- vector("list", length(d))
+    if (!is.null(meta$dimnames)) {
+        dimnames <- meta$dimnames
+    }
+
+    new("TileDBArraySeed", dim=d, dimnames=dimnames, path=x, 
         sparse=is.sparse(s), attr=attr, type=my.type)
+}
+
+.get_metadata <- function(path, attr, sparse) {
+    if (sparse) {
+        obj <- tiledb_sparse(path, attrs=attr)
+    } else {
+        obj <- tiledb_dense(path, attrs=attr)
+    }
+
+    obj <- tiledb_array_open(obj, "READ") # not sure why it doesn't work with query_type="READ".
+    on.exit(tiledb_array_close(obj), add=TRUE)
+
+    type <- tiledb_get_metadata(obj, "type")
+
+    dimnames <- tiledb_get_metadata(obj, "dimnames")
+    if (!is.null(dimnames)) {
+        dimnames <- .unpack64(dimnames)
+    }
+
+    list(type=type, dimnames=dimnames)
 }
 
 #' @importFrom S4Vectors setValidity2

@@ -27,3 +27,15 @@
     msg
 }
 
+#' @importFrom base64enc base64encode 
+.pack64 <- function(x) {
+    con <- rawConnection(raw(0), "r+")
+    on.exit(close(con))
+    serialize(x, con)
+    base64encode(memCompress(rawConnectionValue(con), "gzip"))
+}
+
+#' @importFrom base64enc base64decode
+.unpack64 <- function(x) {
+    unserialize(memDecompress(base64decode(x), "gzip"))
+}

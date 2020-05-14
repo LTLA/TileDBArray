@@ -3,17 +3,22 @@
 #' Write array data to a TileDB backend via \pkg{DelayedArray}'s \linkS4class{RealizationSink} machinery.
 #'
 #' @section Writing a TileDBArray:
-#' \code{writeTileDBArray(x, ...)} writes the matrix-like object \code{x} to a TileDB backend,
-#' returning a \linkS4class{TileDBArray} object referring to that backend. 
-#' Arguments in \code{...} are passed to \code{TileDBRealizationSink} to configure the TileDB representation;
-#' all arguments listed below aside from \code{dim} and \code{type} are applicable.
-#'
-#' \code{TileDBRealizationSink(dim, type="double", path=getTileDBPath(), attr=getTileDBAttr(), 
-#' sparse=getTileDBSparse(), extent=getTileDBExtent(), context=getTileDBContext())}
+#' \preformatted{TileDBRealizationSink(
+#'     dim, 
+#'     dimnames=NULL, 
+#'     type="double", 
+#'     path=getTileDBPath(), 
+#'     attr=getTileDBAttr(), 
+#'     sparse=getTileDBSparse(), 
+#'     extent=getTileDBExtent(), 
+#'     context=getTileDBContext()
+#' )}
 #' returns a TileDBRealizationSink object that can be used to write content to a TileDB backend.
 #' It accepts the following arguments:
 #' \itemize{
 #' \item \code{dim}, an integer vector (usually of length 2) to specify the array dimensions.
+#' \item \code{dimnames}, a list of length equal to \code{dim}, containing character vectors with names for each dimension.
+#' Defaults to \code{NULL}, i.e., no dimnames.
 #' \item \code{type}, a string specifying the data type.
 #' Currently only numeric, logical and integer arrays are supported.
 #' \item \code{path}, a string containing the location of the new TileDB backend.
@@ -23,6 +28,11 @@
 #' specifying the tile extent for each dimension.
 #' \item \code{context} is the TileDB context, defaulting to the output of \code{\link{tiledb_ctx}()}.
 #' }
+#'
+#' \code{writeTileDBArray(x, ...)} writes the matrix-like object \code{x} to a TileDB backend,
+#' returning a \linkS4class{TileDBArray} object referring to that backend. 
+#' Arguments in \code{...} are passed to \code{TileDBRealizationSink} to configure the TileDB representation;
+#' all arguments listed above aside from \code{dim}, \code{dimnames} and \code{type} are applicable.
 #'
 #' @section Coercing to a TileDBArray:
 #' \code{as(x, "TileDBArray")} will coerce a matrix-like object \code{x} to a TileDBArray object.
@@ -60,6 +70,11 @@
 #' # And for sparse logical matrices.
 #' path2l <- tempfile()
 #' out2l <- writeTileDBArray(Y > 0, path=path2l, sparse=TRUE)
+#'
+#' # Works for dimnames.
+#' rownames(X) <- sprintf("GENE_%i", seq_len(nrow(X)))
+#' path3 <- tempfile()
+#' out3 <- writeTileDBArray(X, path=path3)
 #' 
 #' @aliases
 #' writeTileDBArray
@@ -75,7 +90,7 @@
 NULL
 
 #' @export
-TileDBRealizationSink <- function(dim, type="double", path=getTileDBPath(), 
+TileDBRealizationSink <- function(dim, dimnames=NULL, type="double", path=getTileDBPath(), 
     attr=getTileDBAttr(), sparse=getTileDBSparse(), extent=getTileDBExtent(), 
     context=getTileDBContext())
 {
@@ -95,21 +110,39 @@ TileDBRealizationSink <- function(dim, type="double", path=getTileDBPath(),
         attrs=list(tiledb_attr(ctx=context, attr, type=val)))
 
     tiledb_array_create(path, schema)
-
-    # Need to keep track of the differences between INTs and LGLs.
-    if (type=="logical") {
-        if (sparse) {
-            obj <- tiledb_sparse(path, attrs=attr)
-        } else {
-            obj <- tiledb_dense(path, attrs=attr)
-        }
-        obj <- tiledb_array_open(obj, "WRITE") # not sure why it doesn't work with query_type="WRITE".
-        on.exit(tiledb_array_close(obj))
-        tiledb_put_metadata(obj, "type", type)
-    }
+    .edit_metadata(path, attr, sparse=sparse, type=type, dimnames=dimnames)
 
     new("TileDBRealizationSink", dim=dim, type=type, path=path, sparse=sparse, attr=attr)
 }
+
+.edit_metadata <- function(path, attr, sparse, type, dimnames) {
+    has.logical <- type=="logical"
+    has.dimnames <- !is.null(dimnames) && !all(vapply(dimnames, is.null, FALSE))
+    if (!has.logical && !has.dimnames) {
+        return(NULL)
+    }
+
+    if (sparse) {
+        obj <- tiledb_sparse(path, attrs=attr)
+    } else {
+        obj <- tiledb_dense(path, attrs=attr)
+    }
+    on.exit(tiledb_array_close(obj))
+    obj <- tiledb_array_open(obj, "WRITE") # not sure why it doesn't work with query_type="WRITE".
+
+    # Need to keep track of the differences between INTs and LGLs.
+    if (has.logical) {
+        tiledb_put_metadata(obj, "type", type)
+    }
+
+    # Adding dimnames by , if necessary.
+    if (has.dimnames) {
+        tiledb_put_metadata(obj, "dimnames", .pack64(dimnames))
+    }
+
+    NULL
+} 
+
 
 #' @importFrom S4Vectors setValidity2
 setValidity2("TileDBRealizationSink", function(object) {
@@ -163,7 +196,7 @@ setMethod("type", "TileDBRealizationSink", function(x) x@type)
 
 #' @export
 writeTileDBArray <- function(x, path=NULL, ...) {
-    sink <- TileDBRealizationSink(dim(x), type=type(x), path=path, ...)
+    sink <- TileDBRealizationSink(dim(x), dimnames=dimnames(x), type=type(x), path=path, ...)
     BLOCK_write_to_sink(x, sink)
     as(sink, "TileDBArray")
 }
