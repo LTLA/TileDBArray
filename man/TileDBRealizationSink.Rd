@@ -3,6 +3,9 @@
 \name{TileDBRealizationSink}
 \alias{TileDBRealizationSink}
 \alias{writeTileDBArray}
+\alias{TileDBRealizationSink-class}
+\alias{write_block,TileDBRealizationSink-method}
+\alias{type,TileDBRealizationSink-method}
 \alias{coerce,TileDBRealizationSink,TileDBMatrix-method}
 \alias{coerce,TileDBRealizationSink,TileDBArray-method}
 \alias{coerce,TileDBRealizationSink,DelayedArray-method}
@@ -61,6 +64,15 @@ all arguments listed above aside from \code{dim}, \code{dimnames} and \code{type
 \code{as(x, "TileDBArraySeed")} will coerce a TileDBRealizationSink \code{x} to a TileDBArraySeed object.
 
 \code{as(x, "DelayedArray")} will coerce a TileDBRealizationSink \code{x} to a TileDBArray object.
+}
+
+\section{Sink internals}{
+
+\code{write_block(x, viewport, block)} will write the subarray \code{block} to the TileDBRealizationSink \code{x}
+at the specified \code{viewport}, returning a \code{NULL} upon completion.
+See \code{\link{write_block}} in \pkg{DelayedArray} for more details.
+
+\code{type(x)} will return a string specifying the type of the TileDBRealizationSink \code{x}.
 }
 
 \examples{

@@ -5,8 +5,12 @@
 \alias{TileDBArraySeed}
 \alias{TileDBArraySeed-class}
 \alias{TileDBArray-class}
-\alias{show,TileDBArray-method}
-\alias{extract_array,TileDBArray-method}
+\alias{TileDBMatrix}
+\alias{TileDBMatrix-class}
+\alias{show,TileDBArraySeed-method}
+\alias{is_sparse,TileDBArraySeed-method}
+\alias{type,TileDBArraySeed-method}
+\alias{extract_array,TileDBArraySeed-method}
 \alias{DelayedArray,TileDBArraySeed-method}
 \title{Delayed TileDB arrays}
 \description{
@@ -37,10 +41,19 @@ a subclass of the TileDBArray.
 \section{Available operations}{
 
 \code{\link{extract_array}(x, index)} will return an ordinary 
-array corresponding to the TileDBArray \code{x} subsetted
+array corresponding to the TileDBArraySeed \code{x} subsetted
 to the indices in \code{index}. 
 The latter should be a list of length equal to the number of 
 dimensions in \code{x}.
+
+\code{\link{type}(x)} will return a string containing the type of the TileDBArraySeed object \code{x}.
+Currently, only \code{"integer"}, \code{"logical"} and \code{"double"}-precision is supported.
+
+\code{\link{is_sparse}(x)} will return a logical scalar indicating 
+whether the TileDBArraySeed \code{x} uses a sparse format in the TileDB backend.
+
+All of the operations described above are also equally applicable to TileDBArray objects, 
+as their methods simply delegate to those of the TileDBArraySeed.
 
 All operations supported by \linkS4class{DelayedArray} objects are 
 also available for TileDBArray objects.

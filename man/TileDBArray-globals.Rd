@@ -8,6 +8,7 @@
 \alias{setTileDBAttr}
 \alias{getTileDBExtent}
 \alias{setTileDBExtent}
+\alias{getTileDBContext}
 \alias{setTileDBContext}
 \title{TileDBArray global options}
 \usage{
@@ -22,6 +23,8 @@ setTileDBAttr(attr = NULL)
 getTileDBExtent()
 
 setTileDBExtent(extent = NULL)
+
+getTileDBContext()
 
 setTileDBContext(context = NULL)
 }
@@ -49,7 +52,8 @@ or a default value if the former is \code{NULL}:
 All setter functions change the global value and return \code{NULL} invisibly.
 }
 \description{
-Global options for (mostly) writing of TileDBArray backends.
+Global options for writing TileDBArray backends,
+intended for parameters that cannot be automatically derived from the data.
 }
 \seealso{
 \code{\link{writeTileDBArray}}, where these functions are most often used.
