@@ -89,6 +89,7 @@ setTileDBExtent <- function(extent=NULL) {
 }
 
 #' @export
+#' @rdname TileDBArray-globals
 getTileDBContext <- function() {
     if (is.null(context <- .globals$get("context"))) {
         tiledb_ctx()

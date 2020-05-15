@@ -13,6 +13,7 @@ Imports:
     methods, 
     tiledb, 
     BiocGenerics,
+    S4Vectors,
     IRanges,
     base64enc
 Suggests:

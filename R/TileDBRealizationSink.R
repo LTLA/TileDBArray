@@ -48,6 +48,13 @@
 #'
 #' \code{as(x, "DelayedArray")} will coerce a TileDBRealizationSink \code{x} to a TileDBArray object.
 #' 
+#' @section Sink internals:
+#' \code{write_block(x, viewport, block)} will write the subarray \code{block} to the TileDBRealizationSink \code{x}
+#' at the specified \code{viewport}, returning a \code{NULL} upon completion.
+#' See \code{\link{write_block}} in \pkg{DelayedArray} for more details.
+#'
+#' \code{type(x)} will return a string specifying the type of the TileDBRealizationSink \code{x}.
+#' 
 #' @examples
 #' X <- matrix(rnorm(100000), ncol=200)
 #' path <- tempfile()
@@ -80,6 +87,9 @@
 #' @aliases
 #' writeTileDBArray
 #' TileDBRealizationSink
+#' TileDBRealizationSink-class
+#' write_block,TileDBRealizationSink-method
+#' type,TileDBRealizationSink-method
 #' coerce,TileDBRealizationSink,TileDBMatrix-method
 #' coerce,TileDBRealizationSink,TileDBArray-method
 #' coerce,TileDBRealizationSink,DelayedArray-method
@@ -202,28 +212,22 @@ writeTileDBArray <- function(x, sparse=is_sparse(x), ...) {
     as(sink, "TileDBArray")
 }
 
-#' @export
 setAs("TileDBRealizationSink", "TileDBArraySeed",
     function(from) TileDBArraySeed(from@path)
 )
 
-#' @export
 setAs("TileDBRealizationSink", "TileDBArray",
     function(from) DelayedArray(as(from, "TileDBArraySeed"))
 )
 
-#' @export
 setAs("TileDBRealizationSink", "DelayedArray",
     function(from) DelayedArray(as(from, "TileDBArraySeed"))
 )
 
 .as_TileDBArray <- function(from) writeTileDBArray(from)
 
-#' @export
 setAs("ANY", "TileDBArray", .as_TileDBArray)
 
-#' @export
 setAs("DelayedArray", "TileDBArray", .as_TileDBArray)
 
-#' @export
 setAs("DelayedMatrix", "TileDBMatrix", .as_TileDBArray)

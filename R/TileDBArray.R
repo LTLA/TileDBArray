@@ -24,10 +24,19 @@
 #'
 #' @section Available operations:
 #' \code{\link{extract_array}(x, index)} will return an ordinary 
-#' array corresponding to the TileDBArray \code{x} subsetted
+#' array corresponding to the TileDBArraySeed \code{x} subsetted
 #' to the indices in \code{index}. 
 #' The latter should be a list of length equal to the number of 
 #' dimensions in \code{x}.
+#'
+#' \code{\link{type}(x)} will return a string containing the type of the TileDBArraySeed object \code{x}.
+#' Currently, only \code{"integer"}, \code{"logical"} and \code{"double"}-precision is supported.
+#'
+#' \code{\link{is_sparse}(x)} will return a logical scalar indicating 
+#' whether the TileDBArraySeed \code{x} uses a sparse format in the TileDB backend.
+#'
+#' All of the operations described above are also equally applicable to TileDBArray objects, 
+#' as their methods simply delegate to those of the TileDBArraySeed.
 #'
 #' All operations supported by \linkS4class{DelayedArray} objects are 
 #' also available for TileDBArray objects.
@@ -37,8 +46,12 @@
 #' TileDBArraySeed-class
 #' TileDBArray
 #' TileDBArray-class
-#' show,TileDBArray-method
-#' extract_array,TileDBArray-method
+#' TileDBMatrix
+#' TileDBMatrix-class
+#' show,TileDBArraySeed-method
+#' is_sparse,TileDBArraySeed-method
+#' type,TileDBArraySeed-method
+#' extract_array,TileDBArraySeed-method
 #' DelayedArray,TileDBArraySeed-method
 #'
 #' @author Aaron Lun
@@ -147,7 +160,6 @@ setMethod("is_sparse", "TileDBArraySeed", function(x) x@sparse)
 setMethod("type", "TileDBArraySeed", function(x) x@type)
 
 #' @export
-#' @importFrom Matrix sparseMatrix
 setMethod("extract_array", "TileDBArraySeed", function(x, index) {
     d <- dim(x)
     for (i in seq_along(index)) {
