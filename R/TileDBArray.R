@@ -179,8 +179,8 @@ setMethod("extract_array", "TileDBArraySeed", function(x, index) {
 })
 
 #' @export
-TileDBArray <- function(x, ..., query_type="READ") {
-    DelayedArray(TileDBArraySeed(x, ..., query_type=query_type))
+TileDBArray <- function(x, ...) {
+    DelayedArray(TileDBArraySeed(x, ...))
 }
 
 #' @export
