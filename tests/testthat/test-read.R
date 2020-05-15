@@ -16,8 +16,8 @@ YD <- as(SD, "TileDBArray")
 SL <- SD > 0
 YL <- as(SL, "TileDBArray")
 
-tdb <- list(XI, XD, XL)#, YD, YL)
-ref <- list(DI, DD, DL)#, SD, SL)
+tdb <- list(XI, XD, XL, YD, YL)
+ref <- list(DI, DD, DL, SD, SL)
 
 test_that("basic read operations work correctly ", {
     for (x in seq_along(tdb)) {
@@ -67,8 +67,8 @@ test_that("more complex matrix operations work correctly", {
         expect_equal(rowSums(r), rowSums(t))
 
         v <- matrix(rnorm(ncol(r)*2), ncol=2)
-        expect_equal(as.matrix(r %*% v), as.matrix(t %*% v))
+        expect_equivalent(as.matrix(r %*% v), as.matrix(t %*% v))
 
-        expect_equal(as.matrix(t(r)), as.matrix(t(t)))
+        expect_equivalent(as.matrix(t(r)), as.matrix(t(t)))
     }
 })

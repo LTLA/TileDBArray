@@ -279,8 +279,9 @@ setMethod("DelayedArray", "TileDBArraySeed",
             storage.mode(value) <- "logical"
         }
 
-        m <- mapply(match, x=as.list(df[,1L + seq_len(ncol(df)-1L)]), table=usdex)
-        output[m] <- value
+        # Don't rely on "SIMPLIFY" as it doesn't do the right thing for length 1. 
+        m <- mapply(match, x=as.list(df[,1L + seq_len(ncol(df)-1L)]), table=usdex, SIMPLIFY=FALSE)
+        output[do.call(cbind, m)] <- value
     }
 
     m <- mapply(match, x=index, table=usdex, SIMPLIFY=FALSE)
