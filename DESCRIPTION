@@ -1,8 +1,12 @@
 Package: TileDBArray
 Version: 0.0.1
+Date: 2020-05-15
 Title: Using TileDB as a DelayedArray Backend
 Description: Implements a set of DelayedArray backends for the TileDB 
     dense/sparse array storage framework.
+Authors@R:
+    c(person("Aaron", "Lun", role=c("aut", "cre"), email="luna@gene.com"))
+License: Genentech, Inc.
 Depends:
     DelayedArray
 Imports: 
@@ -17,4 +21,7 @@ Suggests:
     BiocStyle,
     testthat,
     Matrix
+VignetteBuilder: knitr
+BugReports: https://github.roche.com/luna/TileDBArray
+URL: https://github.roche.com/luna/TileDBArray
 RoxygenNote: 7.1.0
