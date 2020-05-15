@@ -21,7 +21,7 @@ Write array data to a TileDB backend via \pkg{DelayedArray}'s \linkS4class{Reali
     type="double", 
     path=getTileDBPath(), 
     attr=getTileDBAttr(), 
-    sparse=getTileDBSparse(), 
+    sparse=FALSE,
     extent=getTileDBExtent(), 
     context=getTileDBContext()
 )}
@@ -41,8 +41,9 @@ specifying the tile extent for each dimension.
 \item \code{context} is the TileDB context, defaulting to the output of \code{\link{tiledb_ctx}()}.
 }
 
-\code{writeTileDBArray(x, ...)} writes the matrix-like object \code{x} to a TileDB backend,
+\code{writeTileDBArray(x, sparse=is_sparse(x), ...)} writes the matrix-like object \code{x} to a TileDB backend,
 returning a \linkS4class{TileDBArray} object referring to that backend. 
+Whether a sparse array should be created is determined automatically from \code{x} itself.
 Arguments in \code{...} are passed to \code{TileDBRealizationSink} to configure the TileDB representation;
 all arguments listed above aside from \code{dim}, \code{dimnames} and \code{type} are applicable.
 }

@@ -4,8 +4,6 @@
 \alias{TileDBArray-globals}
 \alias{getTileDBPath}
 \alias{setTileDBPath}
-\alias{getTileDBSparse}
-\alias{setTileDBSparse}
 \alias{getTileDBAttr}
 \alias{setTileDBAttr}
 \alias{getTileDBExtent}
@@ -16,10 +14,6 @@
 getTileDBPath()
 
 setTileDBPath(path = NULL)
-
-getTileDBSparse()
-
-setTileDBSparse(sparse = NULL)
 
 getTileDBAttr()
 
@@ -33,8 +27,6 @@ setTileDBContext(context = NULL)
 }
 \arguments{
 \item{path}{String containing a path to a TileDB backend.}
-
-\item{sparse}{Logical scalar indicating whether sparse backend should be created.}
 
 \item{attr}{String containing the name of a TileDB attribute.}
 
@@ -50,7 +42,6 @@ or a default value if the former is \code{NULL}:
 \itemize{
 \item \code{path} defaults to a temporary file in \code{\link{tempdir}}.
 \item \code{attr} defaults to \code{"x"}.
-\item \code{sparse} defaults to \code{FALSE}.
 \item \code{extent} defaults to \code{100L}.
 \item \code{context} defaults to the value of \code{\link{tiledb_ctx}()}.
 }
