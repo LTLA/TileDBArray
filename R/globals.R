@@ -8,11 +8,11 @@
 
 #' TileDBArray global options
 #'
-#' Global options for (mostly) writing of TileDBArray backends.
+#' Global options for writing TileDBArray backends,
+#' intended for parameters that cannot be automatically derived from the data.
 #'
 #' @param path String containing a path to a TileDB backend.
 #' @param attr String containing the name of a TileDB attribute.
-#' @param sparse Logical scalar indicating whether sparse backend should be created.
 #' @param extent Integer scalar specifying the tile extent for all dimensions.
 #' Alternatively, an integer vector of length equal to the number of dimensions,
 #' specifying a different extent for each dimension in the array to be created.
@@ -24,7 +24,6 @@
 #' \itemize{
 #' \item \code{path} defaults to a temporary file in \code{\link{tempdir}}.
 #' \item \code{attr} defaults to \code{"x"}.
-#' \item \code{sparse} defaults to \code{FALSE}.
 #' \item \code{extent} defaults to \code{100L}.
 #' \item \code{context} defaults to the value of \code{\link{tiledb_ctx}()}.
 #' }
@@ -52,23 +51,6 @@ getTileDBPath <- function() {
 #' @rdname TileDBArray-globals
 setTileDBPath <- function(path=NULL) {
     .globals$set("path", path)
-    invisible(NULL)
-}
-
-#' @export
-#' @rdname TileDBArray-globals
-getTileDBSparse <- function() {
-    if (is.null(sparse <- .globals$get("sparse"))) {
-        FALSE
-    } else {
-        sparse
-    }
-}
-
-#' @export
-#' @rdname TileDBArray-globals
-setTileDBSparse <- function(sparse=NULL) {
-    .globals$set("sparse", sparse)
     invisible(NULL)
 }
 

@@ -9,7 +9,7 @@
 #'     type="double", 
 #'     path=getTileDBPath(), 
 #'     attr=getTileDBAttr(), 
-#'     sparse=getTileDBSparse(), 
+#'     sparse=FALSE,
 #'     extent=getTileDBExtent(), 
 #'     context=getTileDBContext()
 #' )}
@@ -92,8 +92,7 @@ NULL
 
 #' @export
 TileDBRealizationSink <- function(dim, dimnames=NULL, type="double", path=getTileDBPath(), 
-    attr=getTileDBAttr(), sparse=getTileDBSparse(), extent=getTileDBExtent(), 
-    context=getTileDBContext())
+    attr=getTileDBAttr(), sparse=FALSE, extent=getTileDBExtent(), context=getTileDBContext())
 {
     val <- .type.mapping[type]
     if (is.na(val)) {
