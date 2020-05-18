@@ -73,11 +73,11 @@
 #' # Works for sparse numeric matrices.
 #' Y <- Matrix::rsparsematrix(1000, 1000, density=0.01)
 #' path2 <- tempfile()
-#' out2 <- writeTileDBArray(Y, path=path2, sparse=TRUE)
+#' out2 <- writeTileDBArray(Y, path=path2)
 #'
 #' # And for sparse logical matrices.
 #' path2l <- tempfile()
-#' out2l <- writeTileDBArray(Y > 0, path=path2l, sparse=TRUE)
+#' out2l <- writeTileDBArray(Y > 0, path=path2l)
 #'
 #' # Works for dimnames.
 #' rownames(X) <- sprintf("GENE_%i", seq_len(nrow(X)))
@@ -146,14 +146,13 @@ TileDBRealizationSink <- function(dim, dimnames=NULL, type="double", path=getTil
         tiledb_put_metadata(obj, "type", type)
     }
 
-    # Adding dimnames by , if necessary.
+    # Adding dimnames by packing them into base-64 encoding.
     if (has.dimnames) {
         tiledb_put_metadata(obj, "dimnames", .pack64(dimnames))
     }
 
     NULL
 } 
-
 
 #' @importFrom S4Vectors setValidity2
 setValidity2("TileDBRealizationSink", function(object) {
@@ -164,13 +163,6 @@ setValidity2("TileDBRealizationSink", function(object) {
         TRUE
     }
 })
-
-.type.mapping <- c(double="FLOAT64", integer="INT32", logical="INT32")
-
-.rev.type.mapping <- c(
-    FLOAT64="double", FLOAT32="double", UINT32="double", INT64="double", UINT64="double",
-    INT32="integer", INT16="integer", INT8="integer", UINT8="integer", UINT16="integer"
-)
 
 #' @export
 #' @importFrom IRanges start
@@ -183,11 +175,13 @@ setMethod("write_block", "TileDBRealizationSink", function(x, viewport, block) {
         on.exit(tiledb_array_close(obj))
 
         idx <- which(block!=0, arr.ind=TRUE)
-        obj[] <- data.frame(
+        store <- data.frame(
             d1=idx[,1] + starts[1],
             d2=idx[,2] + starts[2],
             x=block[idx]
         )
+        colnames(store)[3] <- x@attr
+        obj[] <- store
 
     } else {
         obj <- tiledb_dense(x@path, attrs=x@attr, query_type="WRITE")

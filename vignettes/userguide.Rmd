@@ -40,7 +40,6 @@ writeTileDBArray(X)
 Alternatively, we can use coercion methods:
 
 ```{r}
-library(TileDBArray)
 as(X, "TileDBArray")
 ```
 

@@ -93,11 +93,11 @@ outl <- writeTileDBArray(Xl, path=pathl)
 # Works for sparse numeric matrices.
 Y <- Matrix::rsparsematrix(1000, 1000, density=0.01)
 path2 <- tempfile()
-out2 <- writeTileDBArray(Y, path=path2, sparse=TRUE)
+out2 <- writeTileDBArray(Y, path=path2)
 
 # And for sparse logical matrices.
 path2l <- tempfile()
-out2l <- writeTileDBArray(Y > 0, path=path2l, sparse=TRUE)
+out2l <- writeTileDBArray(Y > 0, path=path2l)
 
 # Works for dimnames.
 rownames(X) <- sprintf("GENE_\%i", seq_len(nrow(X)))
