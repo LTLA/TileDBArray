@@ -1,0 +1,7 @@
+# DelayedArray backends for TileDB
+
+This package implements [**DelayedArray**](https://github.com/Bioconductor/DelayedArray) backend 
+for [**TileDB**](https://tiledb.com/) to read, write and store dense and sparse arrays.
+The resulting `TileDBArray` objects are directly compatible with any Bioconductor package that accepts `DelayedArray` objects,
+serving as a swap-in replacement for the predominant [`HDF5Array`](https://github.com/Bioconductor/HDF5Array)
+that is currently used throughout the Bioconductor ecosystem for representing large datasets.
