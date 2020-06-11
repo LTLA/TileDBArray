@@ -23,6 +23,7 @@ Suggests:
     knitr,
     rmarkdown,
     BiocStyle,
+    BiocParallel,
     testthat
 biocViews: DataRepresentation, Infrastructure, Software
 VignetteBuilder: knitr
