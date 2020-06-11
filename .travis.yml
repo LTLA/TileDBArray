@@ -1,0 +1,34 @@
+# R package check using Docker containers
+
+os: linux
+dist: bionic
+sudo: required
+services: docker
+
+jobs:
+  include:
+    - name: dev
+      env: DOCKER_CNTR="eddelbuettel/rocker-tiledb:bioc"
+
+env:
+  global:
+    - DOCKER_OPTS="--rm -ti -v $(pwd):/mnt -w /mnt"
+      R_BLD_OPTS="--no-build-vignettes --no-manual"
+      R_CHK_OPTS="--no-vignettes --no-manual"
+      PACKAGE="awk '/^Package: / {print $2}' DESCRIPTION"
+      VERSION="awk '/^Version: / {print $2}' DESCRIPTION"
+
+before_install:
+  - docker pull ${DOCKER_CNTR}
+  - docker run ${DOCKER_OPTS} ${DOCKER_CNTR} r -p -e 'sessionInfo()'
+
+install:
+  - docker run ${DOCKER_OPTS} ${DOCKER_CNTR} R CMD build ${R_BLD_OPTS} .
+
+script:
+  - docker run ${DOCKER_OPTS} ${DOCKER_CNTR} R CMD check ${R_CHK_OPTS} ${PACKAGE}_${VERSION}.tar.gz
+
+notifications:
+  email:
+    on_success: change
+    on_failure: change
