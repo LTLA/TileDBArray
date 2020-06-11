@@ -20,6 +20,7 @@ Suggests:
     knitr,
     rmarkdown,
     BiocStyle,
+    BiocParallel,
     testthat,
     Matrix
 VignetteBuilder: knitr
