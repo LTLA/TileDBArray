@@ -6,7 +6,7 @@ Description: Implements a set of DelayedArray backends for the TileDB
     dense/sparse array storage framework.
 Authors@R:
     c(person("Aaron", "Lun", role=c("aut", "cre"), email="luna@gene.com"))
-License: MIT
+License: MIT + file LICENSE
 Depends:
     DelayedArray
 Imports: 
