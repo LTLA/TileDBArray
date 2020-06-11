@@ -29,6 +29,10 @@
 #' The latter should be a list of length equal to the number of 
 #' dimensions in \code{x}.
 #'
+#' \code{\link{extract_sparse_array}(x, index)} will return a \linkS4class{SparseArraySeed}
+#' containing the indices of non-zero entries in \code{x}, subsetted to the indices in \code{index}.
+#' The latter should be a list of the same content as described for \code{extract_array}.
+#'
 #' \code{\link{type}(x)} will return a string containing the type of the TileDBArraySeed object \code{x}.
 #' Currently, only \code{"integer"}, \code{"logical"} and \code{"double"}-precision is supported.
 #'
@@ -48,10 +52,12 @@
 #' TileDBArray-class
 #' TileDBMatrix
 #' TileDBMatrix-class
+#'
 #' show,TileDBArraySeed-method
 #' is_sparse,TileDBArraySeed-method
 #' type,TileDBArraySeed-method
 #' extract_array,TileDBArraySeed-method
+#' extract_sparse_array,TileDBArraySeed-method
 #' DelayedArray,TileDBArraySeed-method
 #'
 #' @author Aaron Lun
@@ -64,6 +70,11 @@
 #' # Apply typical DelayedArray operations:
 #' as.matrix(B[1:10,1:10])
 #' B %*% runif(ncol(B))
+#'
+#' # This also works for sparse arrays:
+#' sdata <- Matrix::rsparsematrix(nrow=100, ncol=100, density=0.1)
+#' C <- as(sdata, "TileDBArray")
+#' C
 #'
 #' @name TileDBArray
 NULL
@@ -161,15 +172,12 @@ setMethod("type", "TileDBArraySeed", function(x) x@type)
 
 #' @export
 setMethod("extract_array", "TileDBArraySeed", function(x, index) {
-    d <- dim(x)
-    for (i in seq_along(index)) {
-        if (is.null(index[[i]])) index[[i]] <- seq_len(d[i])
-    }
+    index <- .sanitize_indices(x, index)
 
     # Set fill to zero so that it behaves properly with sparse extraction.
     fill <- switch(type(x), double=0, integer=0L, logical=FALSE)
 
-    # Hack to overcome zero-length indices.
+    # Hack to overcome zero-length indices that cause tiledb to throw.
     d2 <- lengths(index)
     if (any(d2==0L)) {
         return(array(rep(fill, 0L), dim=d2))
@@ -184,10 +192,40 @@ setMethod("extract_array", "TileDBArraySeed", function(x, index) {
     on.exit(tiledb_array_close(obj))
 
     if (is_sparse(x)) {
-        .extract_noncontiguous_sparse(obj, index, fill)
+        as.array(.extract_noncontiguous_sparse(obj, index, fill))
     } else {
         .extract_noncontiguous_dense(obj, index, fill)
     }
+})
+
+.sanitize_indices <- function(x, index) {
+    d <- dim(x)
+    for (i in seq_along(index)) {
+        if (is.null(index[[i]])) {
+            index[[i]] <- seq_len(d[i])
+        }
+    }
+    index
+}
+
+#' @export
+setMethod("extract_sparse_array", "TileDBArraySeed", function(x, index) {
+    index <- .sanitize_indices(x, index)
+
+    # Set fill to zero so that it behaves properly with sparse extraction.
+    fill <- switch(type(x), double=0, integer=0L, logical=FALSE)
+
+    # Hack to overcome zero-length indices.
+    d2 <- lengths(index)
+    if (any(d2==0L)) {
+        return(SparseArraySeed(d2, nzindex=matrix(0L, 0, length(index)), nzdata=fill[0]))
+    }
+
+    obj <- tiledb_sparse(x@path, attrs=x@attr, query_type="READ", as.data.frame=TRUE)
+    on.exit(tiledb_array_close(obj))
+
+    sparse.out <- .extract_noncontiguous_sparse(obj, index, fill)
+    as(sparse.out, "SparseArraySeed")
 })
 
 #' @export
@@ -275,12 +313,19 @@ setMethod("DelayedArray", "TileDBArraySeed",
     do.call("[", c(list(x=output), m, list(drop=FALSE)))
 }
 
-.extract_noncontiguous_sparse <- function(obj, index, fill) {
+#' @importFrom Matrix Matrix
+.extract_noncontiguous_sparse <- function(obj, index, fill, as.indices=FALSE) {
     contig <- .get_contiguous(obj, index)
     collected <- contig$collected
     usdex <- contig$usdex
 
-    output <- array(fill, dim=lengths(usdex))
+    # Trying to take advantage of sparsity where we can.
+    if (length(collected)!=2) {
+        output <- array(fill, dim=lengths(usdex))
+    } else {
+        output <- Matrix(fill, nrow=length(usdex[[1]]), ncol=length(usdex[[2]]))
+    }
+
     for (i in seq_along(collected)) { 
         current <- collected[[i]]
         df <- current$block

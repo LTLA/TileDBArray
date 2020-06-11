@@ -11,6 +11,7 @@
 \alias{is_sparse,TileDBArraySeed-method}
 \alias{type,TileDBArraySeed-method}
 \alias{extract_array,TileDBArraySeed-method}
+\alias{extract_sparse_array,TileDBArraySeed-method}
 \alias{DelayedArray,TileDBArraySeed-method}
 \title{Delayed TileDB arrays}
 \description{
@@ -46,6 +47,10 @@ to the indices in \code{index}.
 The latter should be a list of length equal to the number of 
 dimensions in \code{x}.
 
+\code{\link{extract_sparse_array}(x, index)} will return a \linkS4class{SparseArraySeed}
+containing the indices of non-zero entries in \code{x}, subsetted to the indices in \code{index}.
+The latter should be a list of the same content as described for \code{extract_array}.
+
 \code{\link{type}(x)} will return a string containing the type of the TileDBArraySeed object \code{x}.
 Currently, only \code{"integer"}, \code{"logical"} and \code{"double"}-precision is supported.
 
@@ -67,6 +72,11 @@ B
 # Apply typical DelayedArray operations:
 as.matrix(B[1:10,1:10])
 B \%*\% runif(ncol(B))
+
+# This also works for sparse arrays:
+sdata <- Matrix::rsparsematrix(nrow=100, ncol=100, density=0.1)
+C <- as(sdata, "TileDBArray")
+C
 
 }
 \author{

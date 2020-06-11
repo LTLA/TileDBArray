@@ -10,7 +10,8 @@ License: MIT + file LICENSE
 Depends:
     DelayedArray
 Imports: 
-    methods, 
+    methods,
+    Matrix,
     tiledb, 
     BiocGenerics,
     S4Vectors,

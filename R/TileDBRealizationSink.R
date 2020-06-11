@@ -174,12 +174,22 @@ setMethod("write_block", "TileDBRealizationSink", function(x, viewport, block) {
         obj <- tiledb_array(x@path, attrs=x@attr, query_type="WRITE")
         on.exit(tiledb_array_close(obj))
 
-        idx <- which(block!=0, arr.ind=TRUE)
-        store <- data.frame(
-            d1=idx[,1] + starts[1],
-            d2=idx[,2] + starts[2],
-            x=block[idx]
-        )
+        # Need this because SparseArraySeed doesn't follow a matrix abstraction.
+        if (is(block, "SparseArraySeed")) {
+            store <- data.frame(
+                d1=nzindex(block)[,1] + starts[1],
+                d2=nzindex(block)[,2] + starts[2],
+                x=nzdata(block)
+            )
+        } else {
+            idx <- which(block!=0, arr.ind=TRUE)
+            store <- data.frame(
+                d1=idx[,1] + starts[1],
+                d2=idx[,2] + starts[2],
+                x=block[idx]
+            )
+        }
+
         colnames(store)[3] <- x@attr
         obj[] <- store
 
@@ -189,7 +199,9 @@ setMethod("write_block", "TileDBRealizationSink", function(x, viewport, block) {
 
         args <- lapply(width(viewport), seq_len)
         args <- mapply(FUN="+", starts, args, SIMPLIFY=FALSE)
-        args <- c(list(x=obj), args, list(value=block))
+
+        # Need to coerce the block, because it could be a SparseArraySeed.
+        args <- c(list(x=obj), args, list(value=as.array(block)))
         do.call("[<-", args)
     }
 
