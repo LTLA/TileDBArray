@@ -1,6 +1,6 @@
 #' @export
 setClass("TileDBArraySeed", slots=c(dim="integer", dimnames="list", 
-    path="character", sparse="logical", attr="character", type="character"))
+    path="character", sparse="logical", attr="character", type="character", extent="integer"))
 
 #' @export
 setClass("TileDBArray", contains="DelayedArray", slots=c(seed="TileDBArraySeed"))

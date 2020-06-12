@@ -13,6 +13,8 @@
 \alias{extract_array,TileDBArraySeed-method}
 \alias{extract_sparse_array,TileDBArraySeed-method}
 \alias{DelayedArray,TileDBArraySeed-method}
+\alias{path,TileDBArraySeed-method}
+\alias{chunkdim,TileDBArraySeed-method}
 \title{Delayed TileDB arrays}
 \description{
 The TileDBArray class provides a \linkS4class{DelayedArray} backend for TileDB arrays (sparse and dense).
@@ -56,6 +58,11 @@ Currently, only \code{"integer"}, \code{"logical"} and \code{"double"}-precision
 
 \code{\link{is_sparse}(x)} will return a logical scalar indicating 
 whether the TileDBArraySeed \code{x} uses a sparse format in the TileDB backend.
+
+\code{\link{path}(x)} will return a string containing the path to the TileDB backend directory.
+
+\code{\link{chunkdim}(x)} will return an integer vector containing the tile extent in each dimension.
+This will be used as the chunk dimensions in methods like \code{\link{chunkGrid}}.
 
 All of the operations described above are also equally applicable to TileDBArray objects, 
 as their methods simply delegate to those of the TileDBArraySeed.
