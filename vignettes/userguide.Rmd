@@ -2,12 +2,12 @@
 title: A DelayedArray backend for TileDB
 author:
 - name: Aaron Lun
-  email: luna@gene.com
-  affiliation: Genentech gRED B&CB
-date: "Revised: May 15, 2020"
+  email: infinite.monkeys.with.keyboards@gmail.com
+date: "Revised: June 12, 2020"
 output:
   BiocStyle::html_document:
     toc_float: yes
+package: TileDBArray
 vignette: >
   %\VignetteIndexEntry{User guide}
   %\VignetteEngine{knitr::rmarkdown}
