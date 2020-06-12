@@ -39,6 +39,11 @@
 #' \code{\link{is_sparse}(x)} will return a logical scalar indicating 
 #' whether the TileDBArraySeed \code{x} uses a sparse format in the TileDB backend.
 #'
+#' \code{\link{path}(x)} will return a string containing the path to the TileDB backend directory.
+#'
+#' \code{\link{chunkdim}(x)} will return an integer vector containing the tile extent in each dimension.
+#' This will be used as the chunk dimensions in methods like \code{\link{chunkGrid}}.
+#'
 #' All of the operations described above are also equally applicable to TileDBArray objects, 
 #' as their methods simply delegate to those of the TileDBArraySeed.
 #'
@@ -59,6 +64,8 @@
 #' extract_array,TileDBArraySeed-method
 #' extract_sparse_array,TileDBArraySeed-method
 #' DelayedArray,TileDBArraySeed-method
+#' path,TileDBArraySeed-method
+#' chunkdim,TileDBArraySeed-method
 #'
 #' @author Aaron Lun
 #' 
@@ -115,7 +122,7 @@ TileDBArraySeed <- function(x, attr) {
     }
 
     new("TileDBArraySeed", dim=d, dimnames=dimnames, path=x, 
-        sparse=is.sparse(s), attr=attr, type=my.type)
+        sparse=is.sparse(s), attr=attr, type=my.type, extent=meta$extent)
 }
 
 .get_metadata <- function(path, attr, sparse) {
@@ -125,7 +132,7 @@ TileDBArraySeed <- function(x, attr) {
         obj <- tiledb_dense(path, attrs=attr)
     }
 
-    obj <- tiledb_array_open(obj, "READ") # not sure why it doesn't work with query_type="READ".
+    obj <- tiledb_array_open(obj, "READ")
     on.exit(tiledb_array_close(obj), add=TRUE)
 
     type <- tiledb_get_metadata(obj, "type")
@@ -135,7 +142,10 @@ TileDBArraySeed <- function(x, attr) {
         dimnames <- .unpack64(dimnames)
     }
 
-    list(type=type, dimnames=dimnames)
+    D <- dimensions(schema(obj))
+    extent <- vapply(D, tile, 0L)
+
+    list(type=type, dimnames=dimnames, extent=extent)
 }
 
 #' @importFrom S4Vectors setValidity2
@@ -169,6 +179,17 @@ setMethod("is_sparse", "TileDBArraySeed", function(x) x@sparse)
 
 #' @export
 setMethod("type", "TileDBArraySeed", function(x) x@type)
+
+#' @export
+setMethod("chunkdim", "TileDBArraySeed", function(x) {
+    x@extent
+})
+
+#' @export
+#' @importFrom BiocGenerics path
+setMethod("path", "TileDBArraySeed", function(object, ...) {
+    object@path
+})
 
 #' @export
 setMethod("extract_array", "TileDBArraySeed", function(x, index) {
