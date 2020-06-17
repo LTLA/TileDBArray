@@ -14,11 +14,13 @@ Depends:
 Imports: 
     methods,
     Matrix,
+    Rcpp,
     tiledb, 
     BiocGenerics,
     S4Vectors,
     IRanges,
     base64enc
+LinkingTo: Rcpp
 Suggests:
     knitr,
     rmarkdown,
@@ -30,3 +32,4 @@ VignetteBuilder: knitr
 BugReports: https://github.com/LTLA/TileDBArray
 URL: https://github.com/LTLA/TileDBArray
 RoxygenNote: 7.1.0
+
