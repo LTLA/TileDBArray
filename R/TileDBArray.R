@@ -231,7 +231,7 @@ setMethod("extract_sparse_array", "TileDBArraySeed", function(x, index) {
         return(SparseArraySeed(d2, nzindex=matrix(0L, 0, length(index)), nzdata=fill[0]))
     }
 
-    obj <- tiledb_array(path(x), attrs=x@attr, query_type="READ", as.data.frame=TRUE)
+    obj <- tiledb_array(path(x), attrs=x@attr, query_type="READ")
     on.exit(tiledb_array_close(obj))
 
     df <- .extract_values(obj, index)
@@ -256,38 +256,54 @@ setMethod("DelayedArray", "TileDBArraySeed",
     ndim <- length(index)
     index2 <- vector("list", ndim)
 
-    # Identifying all contiguous unique stretches.
     for (i in seq_len(ndim)) {
         cur.index <- index[[i]]
         if (is.null(cur.index)) {
             index2[[i]] <- substitute()
-            next
+        } else {
+            index2[[i]] <- unique(cur.index)
         }
-
-        re.o <- unique(sort(cur.index))
-        diff.from.last <- which(diff(re.o)!=1L)
-        all.starts <- c(1L, diff.from.last+1L) + 0 # need to coerce to double.
-        all.ends <- c(diff.from.last, length(re.o)) + 0 
-        index2[[i]] <- mapply(c, all.starts, all.ends, SIMPLIFY=FALSE)
     }
 
     do.call("[", c(list(x=obj, index2, list(drop=FALSE))))
 }
 
-#' @importFrom S4Vectors queryHits subjectHits findMatches
-.reindex_sparse <- function(df, index) {
-    # Assuming that the first 'ndim' columns of 'out' are indices.
-    for (i in seq_len(ndim)) {
-        cur.index <- index[[i]]
-        if (is.null(cur.index)) {
-            next
-        }
+.reindex_sparse <- function(desired, extracted) {
+    ndim <- length(desired)
+    positions <- starts <- ends <- vector("list", ndim)
 
-        # Expanding to account for duplicates in 'index'.
-        m <- findMatches(out[[i]], cur.index)
-        out <- out[queryHits(m),]
-        out[[i]] <- subjectHits(m)
+    # This aims to resolve a 1-to-many mapping between the extracted indices
+    # and the desired indices. We do so by considering the vector of sorted
+    # desired indices for each dimension. Let's just consider one dimension
+    # and we'll call the sorted vector of desired indices as 'cur.index'.
+    #
+    # Now, consider the corresponding vector of extracted indices in
+    # 'extracted'. For each element of this vector, we want to know the start
+    # and end position of the run of that index in 'cur.index'. This yields
+    # another two vectors of start and end positions in 'starts' and 'end's.
+    # 
+    # Finally, we want the original position of each desired index, i.e.,
+    # prior to sorting. This will be used to remap the indices to refer to 
+    # desired subarray rather than to the full array.
+    for (i in seq_len(ndim)) {
+        cur.index <- desired[[i]]
+        o <- order(cur.index)
+        positions[[i]] <- o
+
+        cur.index <- cur.index[o]
+        diff.pts <- which(cur.index[-1L]!=cur.index[-length(cur.index)])
+        starts0 <- c(0L, diff.pts)
+        ends0 <- c(diff.pts, length(cur.index))
+
+        m <- match(extracted[[i]], runs$values)
+        starts[[i]] <- starts0[m]
+        ends[[i]] <- ends0[m]
     }
 
-    out
+    output <- remap_indices(starts, ends, positions)
+
+    list(
+        indices=output$indices,
+        values=rep.int(extracted[[ndim + 1L]], output$expand)
+    )
 }
