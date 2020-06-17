@@ -193,60 +193,53 @@ setMethod("path", "TileDBArraySeed", function(object, ...) {
 
 #' @export
 setMethod("extract_array", "TileDBArraySeed", function(x, index) {
-    index <- .sanitize_indices(x, index)
-
-    # Set fill to zero so that it behaves properly with sparse extraction.
     fill <- switch(type(x), double=0, integer=0L, logical=FALSE)
+    d2 <- .get_block_dims(x, index)
+    output <- array(rep(fill, 0L), dim=d2)
 
     # Hack to overcome zero-length indices that cause tiledb to throw.
-    d2 <- lengths(index)
     if (any(d2==0L)) {
-        return(array(rep(fill, 0L), dim=d2))
+        return(output)
     }
 
-    # Figuring out what type of array it is.
-    if (is_sparse(x)) {
-        obj <- tiledb_sparse(x@path, attrs=x@attr, query_type="READ", as.data.frame=TRUE)
-    } else {
-        obj <- tiledb_dense(x@path, attrs=x@attr, query_type="READ")
-    }
+    obj <- tiledb_array(path(x), attrs=x@attr, query_type="READ", as.data.frame=TRUE)
     on.exit(tiledb_array_close(obj))
 
-    if (is_sparse(x)) {
-        as.array(.extract_noncontiguous_sparse(obj, index, fill))
-    } else {
-        .extract_noncontiguous_dense(obj, index, fill)
-    }
+    # Can't help but feel this is not the most efficient way to do it.
+    df <- .extract_values(obj, index)
+    df <- .reindex_sparse(df, index) 
+    output[as.matrix(df[,seq_along(d2),drop=FALSE])] <- df[,x@attr]
+
+    output
 })
 
-.sanitize_indices <- function(x, index) {
+.get_block_dims <- function(x, index) {
     d <- dim(x)
     for (i in seq_along(index)) {
-        if (is.null(index[[i]])) {
-            index[[i]] <- seq_len(d[i])
+        if (!is.null(index[[i]])) {
+            d[i] <- length(index[[i]])
         }
     }
-    index
+    d
 }
 
 #' @export
 setMethod("extract_sparse_array", "TileDBArraySeed", function(x, index) {
-    index <- .sanitize_indices(x, index)
-
-    # Set fill to zero so that it behaves properly with sparse extraction.
-    fill <- switch(type(x), double=0, integer=0L, logical=FALSE)
-
-    # Hack to overcome zero-length indices.
-    d2 <- lengths(index)
+    d2 <- .get_block_dims(x, index)
     if (any(d2==0L)) {
+        fill <- switch(type(x), double=0, integer=0L, logical=FALSE)
         return(SparseArraySeed(d2, nzindex=matrix(0L, 0, length(index)), nzdata=fill[0]))
     }
 
-    obj <- tiledb_sparse(x@path, attrs=x@attr, query_type="READ", as.data.frame=TRUE)
+    obj <- tiledb_array(path(x), attrs=x@attr, query_type="READ", as.data.frame=TRUE)
     on.exit(tiledb_array_close(obj))
 
-    sparse.out <- .extract_noncontiguous_sparse(obj, index, fill)
-    as(sparse.out, "SparseArraySeed")
+    df <- .extract_values(obj, index)
+    df <- .reindex_sparse(df, index)
+
+    SparseArraySeed(d2, 
+        nzindex=as.matrix(df[,seq_along(d2),drop=FALSE]), 
+        nzdata=df[,x@attr])
 })
 
 #' @export
@@ -259,109 +252,42 @@ setMethod("DelayedArray", "TileDBArraySeed",
     function(seed) new_DelayedArray(seed, Class="TileDBMatrix")
 )
 
-#######################################################
-# Hacks to get around tiledb's interface limitations. #
-#######################################################
-
-.get_contiguous <- function(obj, index) {
+.extract_values <- function(obj, index) {
     ndim <- length(index)
-    new.starts <- new.ends <- cum.width <- usdex <- vector("list", ndim)
+    index2 <- vector("list", ndim)
 
     # Identifying all contiguous unique stretches.
     for (i in seq_len(ndim)) {
         cur.index <- index[[i]]
+        if (is.null(cur.index)) {
+            index2[[i]] <- substitute()
+            next
+        }
+
         re.o <- unique(sort(cur.index))
-        usdex[[i]] <- re.o
-
         diff.from.last <- which(diff(re.o)!=1L)
-        all.starts <- c(1L, diff.from.last+1L)
-        all.ends <- c(diff.from.last, length(re.o))
-
-        new.starts[[i]] <- all.starts
-        new.ends[[i]] <- all.ends
+        all.starts <- c(1L, diff.from.last+1L) + 0 # need to coerce to double.
+        all.ends <- c(diff.from.last, length(re.o)) + 0 
+        index2[[i]] <- mapply(c, all.starts, all.ends, SIMPLIFY=FALSE)
     }
 
-    # Looping across them to extract every possible combination.
-    collected <- list()
-    current <- rep(1L, ndim)
-    totals <- lengths(new.starts)
-
-    repeat {
-        absolute <- relative <- vector("list", ndim)
-        for (i in seq_len(ndim)) {
-            j <- current[i]
-            relative[[i]] <- new.starts[[i]][j]:new.ends[[i]][j]
-            absolute[[i]] <- usdex[[i]][relative[[i]]]
-        }
-
-        # Because tiledb_sparse just errors if there are no entries.
-        block <- try(do.call("[", c(list(x=obj), absolute, list(drop=FALSE))), silent=TRUE)
-        if (!is(block, "try-error")) {
-            collected[[length(collected)+1L]] <- list(relative=relative, block=block)
-        }
-
-        finished <- TRUE 
-        for (i in seq_len(ndim)) {
-            current[i] <- current[i] + 1L
-            if (current[i] <= totals[i]) {
-                finished <- FALSE
-                break
-            } else {
-                current[i] <- 1L
-            }
-        }
-        if (finished) break
-    }
-
-    list(collected=collected, usdex=usdex)
+    do.call("[", c(list(x=obj, index2, list(drop=FALSE))))
 }
 
-.extract_noncontiguous_dense <- function(obj, index, fill) {
-    contig <- .get_contiguous(obj, index)
-    collected <- contig$collected
-    usdex <- contig$usdex
-
-    output <- array(fill, dim=lengths(usdex))
-    for (i in seq_along(collected)) { 
-        current <- collected[[i]]
-        if (is.logical(fill)) {
-            storage.mode(current$block) <- "logical"
-        }
-        output <- do.call("[<-", c(list(x=output), current$relative, list(value=current$block)))
-    }
-
-    m <- mapply(match, x=index, table=usdex, SIMPLIFY=FALSE)
-    do.call("[", c(list(x=output), m, list(drop=FALSE)))
-}
-
-#' @importFrom Matrix Matrix
-.extract_noncontiguous_sparse <- function(obj, index, fill, as.indices=FALSE) {
-    contig <- .get_contiguous(obj, index)
-    collected <- contig$collected
-    usdex <- contig$usdex
-
-    # Trying to take advantage of sparsity where we can.
-    if (length(collected)!=2) {
-        output <- array(fill, dim=lengths(usdex))
-    } else {
-        output <- Matrix(fill, nrow=length(usdex[[1]]), ncol=length(usdex[[2]]))
-    }
-
-    for (i in seq_along(collected)) { 
-        current <- collected[[i]]
-        df <- current$block
-        if (nrow(df)==0) next
-
-        value <- df[,1]
-        if (is.logical(fill)) {
-            storage.mode(value) <- "logical"
+#' @importFrom S4Vectors queryHits subjectHits findMatches
+.reindex_sparse <- function(df, index) {
+    # Assuming that the first 'ndim' columns of 'out' are indices.
+    for (i in seq_len(ndim)) {
+        cur.index <- index[[i]]
+        if (is.null(cur.index)) {
+            next
         }
 
-        # Don't rely on "SIMPLIFY" as it doesn't do the right thing for length 1. 
-        m <- mapply(match, x=as.list(df[,1L + seq_len(ncol(df)-1L)]), table=usdex, SIMPLIFY=FALSE)
-        output[do.call(cbind, m)] <- value
+        # Expanding to account for duplicates in 'index'.
+        m <- findMatches(out[[i]], cur.index)
+        out <- out[queryHits(m),]
+        out[[i]] <- subjectHits(m)
     }
 
-    m <- mapply(match, x=index, table=usdex, SIMPLIFY=FALSE)
-    do.call("[", c(list(x=output), m, list(drop=FALSE)))
+    out
 }
