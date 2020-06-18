@@ -195,7 +195,7 @@ setMethod("path", "TileDBArraySeed", function(object, ...) {
 setMethod("extract_array", "TileDBArraySeed", function(x, index) {
     fill <- switch(type(x), double=0, integer=0L, logical=FALSE)
     d2 <- .get_block_dims(x, index)
-    output <- array(rep(fill, 0L), dim=d2)
+    output <- array(fill, dim=d2)
 
     # Hack to overcome zero-length indices that cause tiledb to throw.
     if (any(d2==0L)) {
@@ -208,8 +208,8 @@ setMethod("extract_array", "TileDBArraySeed", function(x, index) {
     # Can't help but feel this is not the most efficient way to do it.
     df <- .extract_values(obj, index)
     df <- .reindex_sparse(df, index) 
-    output[as.matrix(df[,seq_along(d2),drop=FALSE])] <- df[,x@attr]
 
+    output[df$indices] <- df$values
     output
 })
 
@@ -237,9 +237,7 @@ setMethod("extract_sparse_array", "TileDBArraySeed", function(x, index) {
     df <- .extract_values(obj, index)
     df <- .reindex_sparse(df, index)
 
-    SparseArraySeed(d2, 
-        nzindex=as.matrix(df[,seq_along(d2),drop=FALSE]), 
-        nzdata=df[,x@attr])
+    SparseArraySeed(d2, nzindex=df$indices, nzdata=df$values)
 })
 
 #' @export
@@ -252,23 +250,26 @@ setMethod("DelayedArray", "TileDBArraySeed",
     function(seed) new_DelayedArray(seed, Class="TileDBMatrix")
 )
 
+#' @importClassesFrom IRanges IRanges 
+#' @importFrom BiocGenerics start end
 .extract_values <- function(obj, index) {
     ndim <- length(index)
     index2 <- vector("list", ndim)
 
     for (i in seq_len(ndim)) {
         cur.index <- index[[i]]
-        if (is.null(cur.index)) {
-            index2[[i]] <- substitute()
-        } else {
-            index2[[i]] <- unique(cur.index)
+        if (!is.null(cur.index)) {
+            cur.index <- sort(unique(cur.index))
+            ir <- as(cur.index, "IRanges")
+            index2[[i]] <- cbind(start(ir), end(ir))
         }
     }
 
-    do.call("[", c(list(x=obj, index2, list(drop=FALSE))))
+    obj@selected_ranges <- index2
+    obj[]
 }
 
-.reindex_sparse <- function(desired, extracted) {
+.reindex_sparse <- function(extracted, desired) {
     ndim <- length(desired)
     positions <- starts <- ends <- vector("list", ndim)
 
@@ -287,17 +288,26 @@ setMethod("DelayedArray", "TileDBArraySeed",
     # desired subarray rather than to the full array.
     for (i in seq_len(ndim)) {
         cur.index <- desired[[i]]
-        o <- order(cur.index)
-        positions[[i]] <- o
+        cur.extract <- extracted[[i]]
 
-        cur.index <- cur.index[o]
-        diff.pts <- which(cur.index[-1L]!=cur.index[-length(cur.index)])
-        starts0 <- c(0L, diff.pts)
-        ends0 <- c(diff.pts, length(cur.index))
+        if (is.null(cur.index)) {
+            positions[[i]] <- cur.extract
+            starts[[i]] <- seq_along(cur.extract) - 1L
+            ends[[i]] <- seq_along(cur.extract)
+        } else {
+            o <- order(cur.index)
+            positions[[i]] <- o
 
-        m <- match(extracted[[i]], runs$values)
-        starts[[i]] <- starts0[m]
-        ends[[i]] <- ends0[m]
+            cur.index <- cur.index[o]
+            diff.pts <- which(cur.index[-1L]!=cur.index[-length(cur.index)])
+            starts0 <- c(0L, diff.pts)
+            ends0 <- c(diff.pts, length(cur.index))
+     
+            run.value <- cur.index[ends0]
+            m <- match(cur.extract, run.value)
+            starts[[i]] <- starts0[m]
+            ends[[i]] <- ends0[m]
+        }
     }
 
     output <- remap_indices(starts, ends, positions)
