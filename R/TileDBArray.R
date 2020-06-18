@@ -209,7 +209,7 @@ setMethod("extract_array", "TileDBArraySeed", function(x, index) {
     df <- .extract_values(obj, index)
     df <- .reindex_sparse(df, index) 
 
-    output[df$indices] <- df$values
+    output[df$indices] <- as(df$values, type(x))
     output
 })
 
@@ -237,7 +237,7 @@ setMethod("extract_sparse_array", "TileDBArraySeed", function(x, index) {
     df <- .extract_values(obj, index)
     df <- .reindex_sparse(df, index)
 
-    SparseArraySeed(d2, nzindex=df$indices, nzdata=df$values)
+    SparseArraySeed(d2, nzindex=df$indices, nzdata=as(df$values, type(x)))
 })
 
 #' @export
