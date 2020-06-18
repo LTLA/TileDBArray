@@ -46,7 +46,7 @@ Rcpp::List remap_indices(Rcpp::List starts, Rcpp::List ends, Rcpp::List position
         int rep_val = 1;
 
         for (size_t d = 0; d < n_dims; ++d) {
-            auto iIt = out_iIt[d];
+            auto& iIt = out_iIt[d];
             const auto s = Starts[d][v], e = Ends[d][v];
             const auto len = e - s;
             rep_seq /= len;
