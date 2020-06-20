@@ -17,7 +17,7 @@ env:
       R_CHK_OPTS="--no-vignettes --no-manual"
       PACKAGE="$(awk '/^Package. / {print $2}' DESCRIPTION)"
       VERSION="$(awk '/^Version. / {print $2}' DESCRIPTION)"
-      PKG_TGZ="${PKG_NAME}_${PKG_VER}.tar.gz"
+      PKG_TGZ="${PACKAGE}_${VERSION}.tar.gz"
 
 before_install:
   - docker pull ${DOCKER_CNTR}
