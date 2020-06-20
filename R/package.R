@@ -9,7 +9,7 @@
 #' @import tiledb
 #' @import DelayedArray
 #' @import methods
-#' @import Matrix
+#' @importFrom Matrix rsparsematrix
 #' @importFrom Rcpp sourceCpp
 #' @useDynLib TileDBArray
 NULL
