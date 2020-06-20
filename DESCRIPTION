@@ -32,4 +32,4 @@ VignetteBuilder: knitr
 BugReports: https://github.com/LTLA/TileDBArray
 URL: https://github.com/LTLA/TileDBArray
 RoxygenNote: 7.1.0
-
+Encoding: UTF-8
