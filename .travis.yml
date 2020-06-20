@@ -13,8 +13,11 @@ jobs:
 env:
   global:
     - DOCKER_OPTS="--rm -ti -v $(pwd):/mnt -w /mnt"
-      R_BLD_OPTS="--no-manual"
-      R_CHK_OPTS="--no-manual"
+      R_BLD_OPTS="--no-build-vignettes --no-manual"
+      R_CHK_OPTS="--no-vignettes --no-manual"
+      PACKAGE="$(awk '/^Package: / {print $2}' DESCRIPTION)"
+      VERSION="$(awk '/^Version: / {print $2}' DESCRIPTION)"
+      PKG_TGZ="${PKG_NAME}_${PKG_VER}.tar.gz"
 
 before_install:
   - docker pull ${DOCKER_CNTR}
@@ -24,7 +27,7 @@ install:
   - docker run ${DOCKER_OPTS} ${DOCKER_CNTR} R CMD build ${R_BLD_OPTS} .
 
 script:
-  - docker run ${DOCKER_OPTS} ${DOCKER_CNTR} R CMD check ${R_CHK_OPTS} TileDBArray_*.tar.gz
+  - docker run ${DOCKER_OPTS} ${DOCKER_CNTR} R CMD check ${R_CHK_OPTS} ${PKG_TGZ}
 
 notifications:
   email:
