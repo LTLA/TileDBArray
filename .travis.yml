@@ -15,9 +15,9 @@ env:
     - DOCKER_OPTS="--rm -ti -v $(pwd):/mnt -w /mnt"
       R_BLD_OPTS="--no-build-vignettes --no-manual"
       R_CHK_OPTS="--no-vignettes --no-manual"
-      PACKAGE="$(awk '/^Package. / {print $2}' DESCRIPTION)"
-      VERSION="$(awk '/^Version. / {print $2}' DESCRIPTION)"
-      PKG_TGZ="${PACKAGE}_${VERSION}.tar.gz"
+      PKG_NAME=$(awk '/Package:/ {print $2}' DESCRIPTION)
+      PKG_VER=$(awk '/Version:/ {print $2}' DESCRIPTION)
+      PKG_TGZ="${PKG_NAME}_${PKG_VER}.tar.gz"
 
 before_install:
   - docker pull ${DOCKER_CNTR}
