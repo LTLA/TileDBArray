@@ -265,7 +265,7 @@ setMethod("DelayedArray", "TileDBArraySeed",
         }
     }
 
-    obj@selected_ranges <- index2
+    selected_ranges(obj) <- index2
     obj[]
 }
 
