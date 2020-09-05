@@ -31,9 +31,8 @@
 #'
 #' \code{writeTileDBArray(x, sparse=is_sparse(x), ...)} writes the matrix-like object \code{x} to a TileDB backend,
 #' returning a \linkS4class{TileDBArray} object referring to that backend. 
-#' Whether a sparse array should be created is determined automatically from \code{x} itself.
-#' Arguments in \code{...} are passed to \code{TileDBRealizationSink} to configure the TileDB representation;
-#' all arguments listed above aside from \code{dim}, \code{dimnames} and \code{type} are applicable.
+#' Appropriate values for \code{dim}, \code{dimnames} and \code{type} are determined automatically from \code{x} itself.
+#' All other arguments described for \code{TileDBRealizationSink} can be passed into \code{...} to configure the representation.
 #'
 #' @section Coercing to a TileDBArray:
 #' \code{as(x, "TileDBArray")} will coerce a matrix-like object \code{x} to a TileDBArray object.
@@ -165,8 +164,7 @@ setValidity2("TileDBRealizationSink", function(object) {
 })
 
 #' @export
-#' @importFrom IRanges start
-#' @importFrom BiocGenerics width
+#' @importFrom DelayedArray start width
 setMethod("write_block", "TileDBRealizationSink", function(x, viewport, block) {
     starts <- start(viewport) - 1L
 

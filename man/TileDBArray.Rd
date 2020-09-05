@@ -23,7 +23,7 @@ The TileDBArray class provides a \linkS4class{DelayedArray} backend for TileDB a
 
 \code{TileDBArray(x, attr)} returns a TileDBArray object given:
 \itemize{
-\item \code{x}, a URI path to a TileDB backend, most typically a directory.
+\item \code{x}, a string containing a URI to a TileDB backend, most typically a path to a directory.
 \item \code{attr}, a string specifying the attribute to represent in the array.
 Defaults to the first attribute.
 }
@@ -43,15 +43,14 @@ a subclass of the TileDBArray.
 
 \section{Available operations}{
 
-\code{\link{extract_array}(x, index)} will return an ordinary 
-array corresponding to the TileDBArraySeed \code{x} subsetted
-to the indices in \code{index}. 
-The latter should be a list of length equal to the number of 
-dimensions in \code{x}.
+\code{\link{extract_array}(x, index)} will return an ordinary array containing values from the TileDBArraySeed \code{x},
+subsetted to the indices specified in \code{index}. 
+The latter should be a list of length equal to the number of dimensions in \code{x},
+where each entry is an integer vector or \code{NULL} (in which case the entirety of the dimension is used).
 
 \code{\link{extract_sparse_array}(x, index)} will return a \linkS4class{SparseArraySeed}
 containing the indices of non-zero entries in \code{x}, subsetted to the indices in \code{index}.
-The latter should be a list of the same content as described for \code{extract_array}.
+The latter should be a list of the same structure as described for \code{extract_array}.
 
 \code{\link{type}(x)} will return a string containing the type of the TileDBArraySeed object \code{x}.
 Currently, only \code{"integer"}, \code{"logical"} and \code{"double"}-precision is supported.
