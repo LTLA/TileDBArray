@@ -1,9 +1,9 @@
 Package: TileDBArray
-Version: 0.0.1
-Date: 2020-05-15
+Version: 0.99.0
+Date: 2020-09-05
 Title: Using TileDB as a DelayedArray Backend
 Description: Implements a DelayedArray backend for reading and
-    writing dense or sparse arrays in the TileDB framework. The
+    writing dense or sparse arrays in the TileDB format. The
     resulting TileDBArrays are compatible with all Bioconductor
     pipelines that can accept DelayedArray instances.
 Authors@R:
@@ -31,5 +31,5 @@ biocViews: DataRepresentation, Infrastructure, Software
 VignetteBuilder: knitr
 BugReports: https://github.com/LTLA/TileDBArray
 URL: https://github.com/LTLA/TileDBArray
-RoxygenNote: 7.1.0
+RoxygenNote: 7.1.1
 Encoding: UTF-8
