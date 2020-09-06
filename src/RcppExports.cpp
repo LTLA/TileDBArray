@@ -6,20 +6,19 @@
 using namespace Rcpp;
 
 // remap_indices
-Rcpp::List remap_indices(Rcpp::List starts, Rcpp::List ends, Rcpp::List positions);
-RcppExport SEXP _TileDBArray_remap_indices(SEXP startsSEXP, SEXP endsSEXP, SEXP positionsSEXP) {
+Rcpp::List remap_indices(Rcpp::List extracted, Rcpp::List remapping);
+RcppExport SEXP _TileDBArray_remap_indices(SEXP extractedSEXP, SEXP remappingSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
-    Rcpp::traits::input_parameter< Rcpp::List >::type starts(startsSEXP);
-    Rcpp::traits::input_parameter< Rcpp::List >::type ends(endsSEXP);
-    Rcpp::traits::input_parameter< Rcpp::List >::type positions(positionsSEXP);
-    rcpp_result_gen = Rcpp::wrap(remap_indices(starts, ends, positions));
+    Rcpp::traits::input_parameter< Rcpp::List >::type extracted(extractedSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type remapping(remappingSEXP);
+    rcpp_result_gen = Rcpp::wrap(remap_indices(extracted, remapping));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_TileDBArray_remap_indices", (DL_FUNC) &_TileDBArray_remap_indices, 3},
+    {"_TileDBArray_remap_indices", (DL_FUNC) &_TileDBArray_remap_indices, 2},
     {NULL, NULL, 0}
 };
 
