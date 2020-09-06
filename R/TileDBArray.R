@@ -185,7 +185,7 @@ setMethod("chunkdim", "TileDBArraySeed", function(x) {
 })
 
 #' @export
-#' @importFrom BiocGenerics path
+#' @importFrom DelayedArray path
 setMethod("path", "TileDBArraySeed", function(object, ...) {
     object@path
 })
@@ -206,8 +206,6 @@ setMethod("extract_array", "TileDBArraySeed", function(x, index) {
 
     # Can't help but feel this is not the most efficient way to do it.
     df <- .extract_values(obj, index)
-    df <- .reindex_sparse(df, index) 
-
     output[df$indices] <- as(df$values, type(x))
     output
 })
@@ -234,8 +232,6 @@ setMethod("extract_sparse_array", "TileDBArraySeed", function(x, index) {
     on.exit(tiledb_array_close(obj))
 
     df <- .extract_values(obj, index)
-    df <- .reindex_sparse(df, index)
-
     SparseArraySeed(d2, nzindex=df$indices, nzdata=as(df$values, type(x)))
 })
 
@@ -249,67 +245,43 @@ setMethod("DelayedArray", "TileDBArraySeed",
     function(seed) new_DelayedArray(seed, Class="TileDBMatrix")
 )
 
-#' @importClassesFrom IRanges IRanges 
-#' @importFrom BiocGenerics start end
-.extract_values <- function(obj, index) {
+.format_indices <- function(index) {
     ndim <- length(index)
-    index2 <- vector("list", ndim)
+    contiguous <- remapping <- vector("list", ndim)
 
     for (i in seq_len(ndim)) {
         cur.index <- index[[i]]
+
         if (!is.null(cur.index)) {
-            cur.index <- sort(unique(cur.index))
-            ir <- as(cur.index, "IRanges")
-            index2[[i]] <- cbind(start(ir), end(ir))
+            o <- order(cur.index)
+            runs <- rle(cur.index[o])
+
+            rv <- runs$value
+            remapping[[i]] <- list(
+                ref.value=rv,
+                ref.length=runs$length,
+                requested=o
+            )
+    
+            is.not.contig <- which(diff(rv)!=1L)
+            contiguous[[i]] <- cbind(
+                rv[c(1L, is.not.contig + 1L)],
+                rv[c(is.not.contig, length(rv))]
+            )
         }
     }
 
-    selected_ranges(obj) <- index2
-    obj[]
+    list(contiguous=contiguous, remapping=remapping)
 }
 
-.reindex_sparse <- function(extracted, desired) {
-    ndim <- length(desired)
-    positions <- starts <- ends <- vector("list", ndim)
+.extract_values <- function(obj, indices) {
+    index.info <- .format_indices(indices)
+    selected_ranges(obj) <- index.info$contiguous
+    extracted <- obj[]
 
-    # This aims to resolve a 1-to-many mapping between the extracted indices
-    # and the desired indices. We do so by considering the vector of sorted
-    # desired indices for each dimension. Let's just consider one dimension
-    # and we'll call the sorted vector of desired indices as 'cur.index'.
-    #
-    # Now, consider the corresponding vector of extracted indices in
-    # 'extracted'. For each element of this vector, we want to know the start
-    # and end position of the run of that index in 'cur.index'. This yields
-    # another two vectors of start and end positions in 'starts' and 'end's.
-    # 
-    # Finally, we want the original position of each desired index, i.e.,
-    # prior to sorting. This will be used to remap the indices to refer to 
-    # desired subarray rather than to the full array.
-    for (i in seq_len(ndim)) {
-        cur.index <- desired[[i]]
-        cur.extract <- extracted[[i]]
-
-        if (is.null(cur.index)) {
-            positions[[i]] <- cur.extract
-            starts[[i]] <- seq_along(cur.extract) - 1L
-            ends[[i]] <- seq_along(cur.extract)
-        } else {
-            o <- order(cur.index)
-            positions[[i]] <- o
-
-            cur.index <- cur.index[o]
-            diff.pts <- which(cur.index[-1L]!=cur.index[-length(cur.index)])
-            starts0 <- c(0L, diff.pts)
-            ends0 <- c(diff.pts, length(cur.index))
-     
-            run.value <- cur.index[ends0]
-            m <- match(cur.extract, run.value)
-            starts[[i]] <- starts0[m]
-            ends[[i]] <- ends0[m]
-        }
-    }
-
-    output <- remap_indices(starts, ends, positions)
+    # Resolves a 1-to-many mapping between the extracted and requested indices.
+    ndim <- length(indices)
+    output <- remap_indices(as.list(extracted[seq_len(ndim)]), index.info$remapping)
 
     list(
         indices=output$indices,

@@ -18,7 +18,6 @@ Imports:
     tiledb, 
     BiocGenerics,
     S4Vectors,
-    IRanges,
     base64enc
 LinkingTo: Rcpp
 Suggests:
