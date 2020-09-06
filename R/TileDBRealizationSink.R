@@ -103,11 +103,6 @@ NULL
 TileDBRealizationSink <- function(dim, dimnames=NULL, type="double", path=getTileDBPath(), 
     attr=getTileDBAttr(), sparse=FALSE, extent=getTileDBExtent(), context=getTileDBContext())
 {
-    val <- .type.mapping[type]
-    if (is.na(val)) {
-        stop("'type' not supported")
-    }
-
     collected <- vector("list", length(dim))
     extent <- rep(as.integer(extent), length(dim))
     for (i in seq_along(dim)) {
@@ -116,6 +111,7 @@ TileDBRealizationSink <- function(dim, dimnames=NULL, type="double", path=getTil
     }
     dom <- tiledb_domain(ctx=context, dims=collected)
 
+    val <- r_to_tiledb_type(vector(type))
     schema <- tiledb_array_schema(ctx=context, dom, sparse=sparse,
         attrs=list(tiledb_attr(ctx=context, attr, type=val)))
 
