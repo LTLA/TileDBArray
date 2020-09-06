@@ -27,13 +27,6 @@
     msg
 }
 
-.type.mapping <- c(double="FLOAT64", integer="INT32", logical="INT32")
-
-.rev.type.mapping <- c(
-    FLOAT64="double", FLOAT32="double", UINT32="double", INT64="double", UINT64="double",
-    INT32="integer", INT16="integer", INT8="integer", UINT8="integer", UINT16="integer"
-)
-
 #' @importFrom base64enc base64encode 
 .pack64 <- function(x) {
     con <- rawConnection(raw(0), "r+")

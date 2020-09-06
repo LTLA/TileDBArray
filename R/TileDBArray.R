@@ -104,9 +104,8 @@ TileDBArraySeed <- function(x, attr) {
         stop("'attr' not in the TileDB attributes")
     }
     
-    type <- datatype(a[[attr]])
-    my.type <- .rev.type.mapping[type]
-    if (is.na(my.type)) {
+    my.type <- tiledb:::tiledb_datatype_R_type(datatype(a[[attr]]))
+    if (! my.type %in% c("logical", "double", "integer", "character")) {
         stop("'attr' refers to an unsupported type")
     }
     
