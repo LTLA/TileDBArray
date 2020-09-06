@@ -1,8 +1,5 @@
 #include "Rcpp.h"
 #include <algorithm>
-#include <unordered_map>
-
-typedef std::unordered_map<int, std::pair<const int*, int> > mapping;
 
 // [[Rcpp::export(rng=false)]]
 Rcpp::List remap_indices(Rcpp::List extracted, Rcpp::List remapping) {
@@ -12,32 +9,43 @@ Rcpp::List remap_indices(Rcpp::List extracted, Rcpp::List remapping) {
     }
 
     /* Setting up a stack of integer vectors for quick reference. We also
-     * create the req_mapping dictionary that maps each observed index to the
-     * sequence of requested indices in the extract_array() call.
+     * create the array that maps each observed index to the sequence of
+     * requested indices in the extract_array() call.
      */
     std::deque<bool> do_remap(n_dims, true);
-    std::vector<mapping> req_mapping(n_dims);
-    std::vector<Rcpp::IntegerVector> requested, observed; 
+    std::vector<Rcpp::IntegerVector> matches(n_dims);
+    std::vector<std::vector<std::pair<const int*, int> > > mappings(n_dims);
+    std::vector<Rcpp::IntegerVector> requested(n_dims); // this MUST exist to ensure the pointers refer to a realized array.
 
     for (size_t d = 0; d < n_dims; ++d) {
-        observed.push_back(extracted[d]);
+        Rcpp::IntegerVector cur_extract = extracted[d];
 
         SEXP current = remapping[d];
         if (current == R_NilValue) {
-            do_remap[d]=false;
+            // Storing the extracted values directly, as the remapping
+            // is that of 1:1 identity anyway.
+            matches[d] = cur_extract; 
+            do_remap[d] = false;
             continue;
         }
 
         Rcpp::List as_list(remapping[d]);
-        Rcpp::IntegerVector ref_value = as_list["ref.value"];
-        Rcpp::IntegerVector ref_len = as_list["ref.length"];
-        requested.push_back(as_list["requested"]);
+        requested[d] = as_list["requested"];
 
-        auto& curmapping=req_mapping[d];
+        Rcpp::IntegerVector ref_value = as_list["ref.value"];
+        matches[d] = Rcpp::match(Rcpp::noNA(cur_extract), Rcpp::noNA(ref_value));
+        for (auto mIt = matches[d].begin(); mIt!=matches[d].end(); ++mIt) {
+            --(*mIt); // zero indexing.
+        }
+
+        auto& cur_mapping = mappings[d];
+        Rcpp::IntegerVector ref_len = as_list["ref.length"];
+        cur_mapping.reserve(ref_value.size());
+
+        const int* rqptr=requested[d].begin();
         auto rlIt=ref_len.begin();
-        const int* rqptr=requested.back().begin();        
         for (auto rvIt=ref_value.begin(); rvIt!=ref_value.end(); ++rvIt, ++rlIt) {
-            curmapping[*rvIt] = std::make_pair(rqptr, *rlIt);
+            cur_mapping.push_back(std::make_pair(rqptr, *rlIt));
             rqptr += *rlIt;
         }
     }
@@ -45,22 +53,16 @@ Rcpp::List remap_indices(Rcpp::List extracted, Rcpp::List remapping) {
     /* Figuring out the total required length of the output, based on the
      * number of entries after expansion of each observed set of indices.
      */
-    const size_t n_values = (n_dims ? observed.front().size() : 0);
+    const size_t n_values = (n_dims ? matches.front().size() : 0);
     Rcpp::IntegerVector n_copies(n_values, 1);
 
     for (size_t d = 0; d < n_dims; ++d) {
-        if (!do_remap[d]) {
-            continue;
-        }
-
-        auto oIt=observed[d].begin();
-        auto& curmapping=req_mapping[d];
-        for (auto ncIt = n_copies.begin(); ncIt != n_copies.end(); ++ncIt, ++oIt) {
-            auto mapIt=curmapping.find(*oIt);
-            if (mapIt==curmapping.end()) {
-                throw std::runtime_error("missing key in mapping table");
+        if (do_remap[d]) {
+            auto mIt = matches[d].begin();
+            const auto& cur_mapping = mappings[d];
+            for (auto ncIt = n_copies.begin(); ncIt != n_copies.end(); ++ncIt, ++mIt) {
+                (*ncIt) *= cur_mapping[*mIt].second;
             }
-            (*ncIt) *= (mapIt->second).second;
         }
     }
 
@@ -81,16 +83,16 @@ Rcpp::List remap_indices(Rcpp::List extracted, Rcpp::List remapping) {
     auto outIt = out_indices.begin();
 
     for (size_t d = 0; d < n_dims; ++d) {
-        auto& curmapping = req_mapping[d];
-        auto& cur_observed = observed[d];
-        auto oIt = cur_observed.begin();
+        auto& cur_mapping = mappings[d];
+        auto& cur_matches = matches[d];
+        auto mIt = cur_matches.begin();
 
         if (do_remap[d]) {
-            for (size_t v = 0; v < n_values; ++v, ++oIt) {
+            for (size_t v = 0; v < n_values; ++v, ++mIt) {
                 int& rep_seq = repeat_series[v];
                 int& rep_val = repeat_element[v];
 
-                const auto& cur_series = curmapping[*oIt];
+                const auto& cur_series = cur_mapping[*mIt];
                 const int* ptr = cur_series.first;
                 const int len = cur_series.second;
                 rep_seq /= len;
@@ -106,9 +108,9 @@ Rcpp::List remap_indices(Rcpp::List extracted, Rcpp::List remapping) {
         } else {
             // Equivalent to a series of length 1, as there's a 1:1 mapping
             // from each observed element back to itself.
-            for (size_t v = 0; v < n_values; ++v, ++oIt) {
+            for (size_t v = 0; v < n_values; ++v, ++mIt) {
                 const int N = repeat_series[v] * repeat_element[v];
-                std::fill(outIt, outIt + N, *oIt);
+                std::fill(outIt, outIt + N, *mIt);
                 outIt += N;
             }
         }
