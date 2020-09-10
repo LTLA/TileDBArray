@@ -31,6 +31,13 @@
 #' All setter functions change the global value and return \code{NULL} invisibly.
 #'
 #' @author Aaron Lun
+#' @examples
+#' \dontshow{old <- getTileDBPath()}
+#'
+#' setTileDBPath("my_local_dir")
+#' getTileDBPath()
+#'
+#' \dontshow{setTileDBPath(old)}
 #' 
 #' @seealso \code{\link{writeTileDBArray}}, where these functions are most often used.
 #'
@@ -40,11 +47,7 @@ NULL
 #' @export
 #' @rdname TileDBArray-globals
 getTileDBPath <- function() {
-    if (is.null(path <- .globals$get("path"))) {
-        tempfile()
-    } else {
-        path
-    }
+    .globals$get("path")
 }
 
 #' @export

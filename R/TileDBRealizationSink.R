@@ -115,6 +115,10 @@ TileDBRealizationSink <- function(dim, dimnames=NULL, type="double", path=getTil
     schema <- tiledb_array_schema(ctx=context, dom, sparse=sparse,
         attrs=list(tiledb_attr(ctx=context, attr, type=val)))
 
+    if (is.null(path)) {
+        path <- tempfile()
+    }
+
     tiledb_array_create(path, schema)
     .edit_metadata(path, attr, sparse=sparse, type=type, dimnames=dimnames)
 

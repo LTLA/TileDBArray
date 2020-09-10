@@ -70,7 +70,7 @@ test_that("responds to the path", {
 
     # Unsets itself properly.
     setTileDBPath()
-    expect_false(identical(getTileDBPath(), path))
+    expect_null(getTileDBPath())
 })
 
 test_that("other global variables behave as expected", {
