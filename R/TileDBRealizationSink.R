@@ -143,7 +143,7 @@ TileDBRealizationSink <- function(dim, dimnames=NULL, type="double", path=getTil
 
     # Adding dimnames by packing them into base-64 encoding.
     if (has.dimnames) {
-        tiledb_put_metadata(obj, "dimnames", .pack64(dimnames))
+        tiledb_put_metadata(obj, "dimnames", .pack_dimnames(dimnames))
     }
 
     NULL
