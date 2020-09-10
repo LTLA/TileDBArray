@@ -55,6 +55,15 @@ All setter functions change the global value and return \code{NULL} invisibly.
 Global options for writing TileDBArray backends,
 intended for parameters that cannot be automatically derived from the data.
 }
+\examples{
+\dontshow{old <- getTileDBPath()}
+
+setTileDBPath("my_local_dir")
+getTileDBPath()
+
+\dontshow{setTileDBPath(old)}
+
+}
 \seealso{
 \code{\link{writeTileDBArray}}, where these functions are most often used.
 }
