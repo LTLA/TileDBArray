@@ -13,15 +13,13 @@ Depends:
     DelayedArray
 Imports: 
     methods,
-    Matrix,
     Rcpp,
     tiledb, 
-    BiocGenerics,
-    S4Vectors,
-    base64enc
+    S4Vectors
 LinkingTo: Rcpp
 Suggests:
     knitr,
+    Matrix,
     rmarkdown,
     BiocStyle,
     BiocParallel,

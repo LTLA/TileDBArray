@@ -137,7 +137,7 @@ TileDBArraySeed <- function(x, attr) {
 
     dimnames <- tiledb_get_metadata(obj, "dimnames")
     if (!is.null(dimnames)) {
-        dimnames <- .unpack64(dimnames)
+        dimnames <- .unpack_dimnames(dimnames)
     }
 
     D <- dimensions(schema(obj))
