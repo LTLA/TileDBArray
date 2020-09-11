@@ -1,35 +1,41 @@
-# R package check using Docker containers
+# Run Travis CI for R using https://eddelbuettel.github.io/r-travis/
 
-os: linux
-dist: bionic
+language: c
 sudo: required
-services: docker
+dist: bionic
 
-jobs:
-  include:
-    - name: dev
-      env: DOCKER_CNTR="eddelbuettel/rocker-tiledb:bioc"
-
+## Two core settings: BSPM for binary installation where possible, and no
+## installation of 'Suggests:' to keep things lighter.
+##
+## We also add edd/r-4.0 as it contains three binary packages (RcppDate,
+## RcppCCTZ, nanotime) used by the tiledb package. This is optional.
 env:
   global:
-    - DOCKER_OPTS="--rm -ti -v $(pwd):/mnt -w /mnt"
-      R_BLD_OPTS="--no-manual"
-      R_CHK_OPTS="--no-manual"
-      PKG_NAME=$(awk '/Package:/ {print $2}' DESCRIPTION)
-      PKG_VER=$(awk '/Version:/ {print $2}' DESCRIPTION)
-      PKG_TGZ="${PKG_NAME}_${PKG_VER}.tar.gz"
+    - USE_BSPM="true"
+    - _R_CHECK_FORCE_SUGGESTS_="false"
+    - ADDED_PPAS="ppa:edd/r-4.0"
 
+## Install the worker script and use it to set things up
 before_install:
-  - docker pull ${DOCKER_CNTR}
-  - docker run ${DOCKER_OPTS} ${DOCKER_CNTR} r -p -e 'sessionInfo()'
+  - curl -OLs https://eddelbuettel.github.io/r-travis/run.sh && chmod 0755 run.sh
+  - ./run.sh bootstrap
 
+## Take care of dependencies (via remotes::install_deps which feeds into
+## BSPM-enabled install.packages(); also install_all installs Suggests:
+## too, and install_r can install named packages from known repos 
 install:
-  - docker run ${DOCKER_OPTS} ${DOCKER_CNTR} R CMD build ${R_BLD_OPTS} .
+  - ./run.sh install_deps
 
+## Run tests  
 script:
-  - docker run ${DOCKER_OPTS} ${DOCKER_CNTR} R CMD check ${R_CHK_OPTS} ${PKG_TGZ}
+  - ./run.sh run_tests
+
+## Dump logs of failed
+after_failure:
+  - ./run.sh dump_logs
 
 notifications:
   email:
     on_success: change
     on_failure: change
+  
