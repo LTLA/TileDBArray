@@ -203,7 +203,7 @@ setMethod("write_block", "TileDBRealizationSink", function(x, viewport, block) {
         do.call("[<-", args)
     }
 
-    NULL
+    x
 })
 
 #' @export
