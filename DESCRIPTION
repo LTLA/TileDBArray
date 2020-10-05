@@ -1,6 +1,6 @@
 Package: TileDBArray
-Version: 0.99.0
-Date: 2020-09-05
+Version: 0.99.1
+Date: 2020-10-02
 Title: Using TileDB as a DelayedArray Backend
 Description: Implements a DelayedArray backend for reading and
     writing dense or sparse arrays in the TileDB format. The
@@ -10,7 +10,7 @@ Authors@R:
     c(person("Aaron", "Lun", role=c("aut", "cre"), email="infinite.monkeys.with.keyboards@gmail.com"))
 License: MIT + file LICENSE
 Depends:
-    DelayedArray
+    DelayedArray (>= 0.15.14)
 Imports: 
     methods,
     Rcpp,

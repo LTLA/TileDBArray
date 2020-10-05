@@ -203,7 +203,7 @@ setMethod("write_block", "TileDBRealizationSink", function(x, viewport, block) {
         do.call("[<-", args)
     }
 
-    NULL
+    x
 })
 
 #' @export
@@ -212,7 +212,7 @@ setMethod("type", "TileDBRealizationSink", function(x) x@type)
 #' @export
 writeTileDBArray <- function(x, sparse=is_sparse(x), ...) {
     sink <- TileDBRealizationSink(dim(x), dimnames=dimnames(x), type=type(x), sparse=sparse, ...)
-    BLOCK_write_to_sink(x, sink)
+    sink <- BLOCK_write_to_sink(sink, x)
     as(sink, "TileDBArray")
 }
 
