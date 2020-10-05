@@ -67,8 +67,8 @@ All other arguments described for \code{TileDBRealizationSink} can be passed int
 
 \section{Sink internals}{
 
-\code{write_block(x, viewport, block)} will write the subarray \code{block} to the TileDBRealizationSink \code{x}
-at the specified \code{viewport}, returning a \code{NULL} upon completion.
+\code{write_block(sink, viewport, block)} will write the subarray \code{block} to the TileDBRealizationSink \code{sink}
+at the specified \code{viewport}, returning \code{sink} upon completion.
 See \code{\link{write_block}} in \pkg{DelayedArray} for more details.
 
 \code{type(x)} will return a string specifying the type of the TileDBRealizationSink \code{x}.
