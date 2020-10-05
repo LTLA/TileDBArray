@@ -1,41 +1,27 @@
-# Run Travis CI for R using https://eddelbuettel.github.io/r-travis/
+# Run Travis CI using Rocker Project containers
 
 language: c
 sudo: required
-dist: bionic
+dist: focal
+services: docker
 
-## Two core settings: BSPM for binary installation where possible, and no
-## installation of 'Suggests:' to keep things lighter.
-##
-## We also add edd/r-4.0 as it contains three binary packages (RcppDate,
-## RcppCCTZ, nanotime) used by the tiledb package. This is optional.
+jobs:
+  include:
+    - name: dev
+      env: DOCKER_CNTR="rocker/drd"
+
 env:
   global:
-    - USE_BSPM="true"
-    - _R_CHECK_FORCE_SUGGESTS_="false"
-    - ADDED_PPAS="ppa:edd/r-4.0"
-
-## Install the worker script and use it to set things up
-before_install:
-  - curl -OLs https://eddelbuettel.github.io/r-travis/run.sh && chmod 0755 run.sh
-  - ./run.sh bootstrap
-
-## Take care of dependencies (via remotes::install_deps which feeds into
-## BSPM-enabled install.packages(); also install_all installs Suggests:
-## too, and install_r can install named packages from known repos 
+    - DOCKER_OPTS="--rm -ti -v $(pwd):/mnt -w /mnt"
+      
 install:
-  - ./run.sh install_deps
+  - docker pull ${DOCKER_CNTR}
 
-## Run tests  
 script:
-  - ./run.sh run_tests
-
-## Dump logs of failed
-after_failure:
-  - ./run.sh dump_logs
+  - docker run ${DOCKER_OPTS} ${DOCKER_CNTR} /mnt/scripts/ci.sh
 
 notifications:
   email:
     on_success: change
     on_failure: change
-  
+
