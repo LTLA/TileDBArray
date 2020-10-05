@@ -4,7 +4,7 @@
 // [[Rcpp::export(rng=false)]]
 Rcpp::List remap_indices(Rcpp::List extracted, Rcpp::List remapping) {
     const size_t n_dims = extracted.size();
-    if (n_dims != remapping.size()) {
+    if (n_dims != static_cast<size_t>(remapping.size())) {
         throw std::runtime_error("'remapping' and 'extracted' should have the same length");
     }
 
