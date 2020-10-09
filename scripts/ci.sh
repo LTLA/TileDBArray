@@ -11,7 +11,7 @@ PKG_TGZ="${PKG_NAME}_${PKG_VER}.tar.gz"
 
 ## -- Update packages and install build dependencies
 apt update -qq
-apt upgrade -q
+apt upgrade -q -y
 apt install -y --no-install-recommends libpcre2-dev liblzma-dev libbz2-dev libicu-dev libblas-dev liblapack-dev
 
 ## -- Build littler under r-devel and link it as to /usr/local/bin (shadowing the existing one)
