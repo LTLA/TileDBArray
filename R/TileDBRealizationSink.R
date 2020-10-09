@@ -10,7 +10,8 @@
 #'     path=getTileDBPath(), 
 #'     attr=getTileDBAttr(), 
 #'     sparse=FALSE,
-#'     extent=getTileDBExtent(), 
+#'     extent=getTileDBExtent(),
+#'     capacity=getTimeDBCapacity(),
 #'     context=getTileDBContext()
 #' )}
 #' returns a TileDBRealizationSink object that can be used to write content to a TileDB backend.
@@ -26,6 +27,7 @@
 #' \item \code{sparse} is a logical scalar indicating whether the array should be stored in sparse form.
 #' \item \code{extent} is an integer scalar (or vector of length equal to \code{dim})
 #' specifying the tile extent for each dimension.
+#' \item \code{capacity} is an integer scalar specifying the tile capacity (applicable only to sparse arrays).
 #' \item \code{context} is the TileDB context, defaulting to the output of \code{\link{tiledb_ctx}()}.
 #' }
 #'
@@ -101,7 +103,8 @@ NULL
 
 #' @export
 TileDBRealizationSink <- function(dim, dimnames=NULL, type="double", path=getTileDBPath(), 
-    attr=getTileDBAttr(), sparse=FALSE, extent=getTileDBExtent(), context=getTileDBContext())
+    attr=getTileDBAttr(), sparse=FALSE, extent=getTileDBExtent(), capacity=getTileDBCapacity(),
+    context=getTileDBContext())
 {
     collected <- vector("list", length(dim))
     extent <- rep(as.integer(extent), length(dim))
@@ -114,6 +117,9 @@ TileDBRealizationSink <- function(dim, dimnames=NULL, type="double", path=getTil
     val <- r_to_tiledb_type(vector(type))
     schema <- tiledb_array_schema(ctx=context, dom, sparse=sparse,
         attrs=list(tiledb_attr(ctx=context, attr, type=val)))
+
+    ## FIXME: Dirk to make set_capacity accessible from R
+    if (!is.null(capacity)) tiledb:::libtiledb_array_schema_set_capacity(schema@ptr, capacity)
 
     if (is.null(path)) {
         path <- tempfile()

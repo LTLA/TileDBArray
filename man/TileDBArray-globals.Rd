@@ -8,6 +8,8 @@
 \alias{setTileDBAttr}
 \alias{getTileDBExtent}
 \alias{setTileDBExtent}
+\alias{getTileDBCapacity}
+\alias{setTileDBCapacity}
 \alias{getTileDBContext}
 \alias{setTileDBContext}
 \title{TileDBArray global options}
@@ -23,6 +25,10 @@ setTileDBAttr(attr = NULL)
 getTileDBExtent()
 
 setTileDBExtent(extent = NULL)
+
+getTileDBCapacity()
+
+setTileDBCapacity(capacity = NULL)
 
 getTileDBContext()
 

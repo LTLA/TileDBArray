@@ -93,6 +93,23 @@ setTileDBExtent <- function(extent=NULL) {
 
 #' @export
 #' @rdname TileDBArray-globals
+getTileDBCapacity <- function() {
+    if (is.null(capacity <- .globals$get("capacity"))) {
+        NULL
+    } else {
+        capacity
+    }
+}
+
+#' @export
+#' @rdname TileDBArray-globals
+setTileDBCapacity <- function(capacity=NULL) {
+    .globals$set("capacity", capacity)
+    invisible(NULL)
+}
+
+#' @export
+#' @rdname TileDBArray-globals
 getTileDBContext <- function() {
     if (is.null(context <- .globals$get("context"))) {
         tiledb_ctx()

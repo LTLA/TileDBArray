@@ -25,7 +25,8 @@ Write array data to a TileDB backend via \pkg{DelayedArray}'s \linkS4class{Reali
     path=getTileDBPath(), 
     attr=getTileDBAttr(), 
     sparse=FALSE,
-    extent=getTileDBExtent(), 
+    extent=getTileDBExtent(),
+    capacity=getTimeDBCapacity(),
     context=getTileDBContext()
 )}
 returns a TileDBRealizationSink object that can be used to write content to a TileDB backend.
@@ -41,6 +42,7 @@ Currently only numeric, logical and integer arrays are supported.
 \item \code{sparse} is a logical scalar indicating whether the array should be stored in sparse form.
 \item \code{extent} is an integer scalar (or vector of length equal to \code{dim})
 specifying the tile extent for each dimension.
+\item \code{capacity} is an integer scalar specifying the tile capacity (applicable only to sparse arrays).
 \item \code{context} is the TileDB context, defaulting to the output of \code{\link{tiledb_ctx}()}.
 }
 
