@@ -48,8 +48,8 @@
 #' \code{as(x, "DelayedArray")} will coerce a TileDBRealizationSink \code{x} to a TileDBArray object.
 #' 
 #' @section Sink internals:
-#' \code{write_block(x, viewport, block)} will write the subarray \code{block} to the TileDBRealizationSink \code{x}
-#' at the specified \code{viewport}, returning a \code{NULL} upon completion.
+#' \code{write_block(sink, viewport, block)} will write the subarray \code{block} to the TileDBRealizationSink \code{sink}
+#' at the specified \code{viewport}, returning \code{sink} upon completion.
 #' See \code{\link{write_block}} in \pkg{DelayedArray} for more details.
 #'
 #' \code{type(x)} will return a string specifying the type of the TileDBRealizationSink \code{x}.
@@ -165,11 +165,11 @@ setValidity2("TileDBRealizationSink", function(object) {
 
 #' @export
 #' @importFrom DelayedArray start width
-setMethod("write_block", "TileDBRealizationSink", function(x, viewport, block) {
+setMethod("write_block", "TileDBRealizationSink", function(sink, viewport, block) {
     starts <- start(viewport) - 1L
 
-    if (x@sparse) {
-        obj <- tiledb_array(x@path, attrs=x@attr, query_type="WRITE")
+    if (sink@sparse) {
+        obj <- tiledb_array(sink@path, attrs=sink@attr, query_type="WRITE")
         on.exit(tiledb_array_close(obj))
 
         # Need this because SparseArraySeed doesn't follow a matrix abstraction.
@@ -177,33 +177,33 @@ setMethod("write_block", "TileDBRealizationSink", function(x, viewport, block) {
             store <- data.frame(
                 d1=nzindex(block)[,1] + starts[1],
                 d2=nzindex(block)[,2] + starts[2],
-                x=nzdata(block)
+                sink=nzdata(block)
             )
         } else {
             idx <- which(block!=0, arr.ind=TRUE)
             store <- data.frame(
                 d1=idx[,1] + starts[1],
                 d2=idx[,2] + starts[2],
-                x=block[idx]
+                sink=block[idx]
             )
         }
 
-        colnames(store)[3] <- x@attr
+        colnames(store)[3] <- sink@attr
         obj[] <- store
 
     } else {
-        obj <- tiledb_dense(x@path, attrs=x@attr, query_type="WRITE")
+        obj <- tiledb_dense(sink@path, attrs=sink@attr, query_type="WRITE")
         on.exit(tiledb_array_close(obj))
 
         args <- lapply(width(viewport), seq_len)
         args <- mapply(FUN="+", starts, args, SIMPLIFY=FALSE)
 
         # Need to coerce the block, because it could be a SparseArraySeed.
-        args <- c(list(x=obj), args, list(value=as.array(block)))
+        args <- c(list(sink=obj), args, list(value=as.array(block)))
         do.call("[<-", args)
     }
 
-    x
+    sink
 })
 
 #' @export
