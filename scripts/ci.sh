@@ -20,7 +20,7 @@ ln -sf /usr/local/lib/R/site-library/littler/bin/r /usr/local/bin/r
 
 ## -- use littler and littler scripts to install BioConductor development packages
 install.r Rcpp tiledb BiocManager Matrix lattice testthat
-r -l BiocManager -e 'install(version="release", ask=FALSE, update=TRUE)'
+r -l BiocManager -e 'install(version="devel", ask=FALSE, update=TRUE)'
 r -l BiocManager -e 'install(c("DelayedArray", "S4Vectors"), ask=FALSE)'
 
 ## -- now that everything is prepared, create a tarball and check it
