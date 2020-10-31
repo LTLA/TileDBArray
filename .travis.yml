@@ -7,8 +7,10 @@ services: docker
 
 jobs:
   include:
-    - name: dev
-      env: DOCKER_CNTR="rocker/drd"
+    - name: rel
+      env: DOCKER_CNTR="rocker/r-base" JOB="rel"
+    #- name: dev
+    #  env: DOCKER_CNTR="rocker/drd" JOB="dev"
 
 env:
   global:
@@ -18,7 +20,8 @@ install:
   - docker pull ${DOCKER_CNTR}
 
 script:
-  - docker run ${DOCKER_OPTS} ${DOCKER_CNTR} /mnt/scripts/ci.sh
+  - if [[ "$JOB" == "dev" ]]; then docker run ${DOCKER_OPTS} ${DOCKER_CNTR} /mnt/scripts/ciDev.sh; fi
+  - if [[ "$JOB" == "rel" ]]; then docker run ${DOCKER_OPTS} ${DOCKER_CNTR} /mnt/scripts/ciRel.sh; fi
 
 notifications:
   email:
