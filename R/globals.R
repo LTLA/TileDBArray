@@ -1,5 +1,5 @@
 .globals <- (function () {
-    current <- list(path=NULL, attr=NULL, sparse=NULL, tile=NULL, ctx=NULL)
+    current <- list(path=NULL, attr=NULL, sparse=NULL, tile=NULL, cellorder=NULL, ctx=NULL)
     list(
         get=function(x) current[[x]],
         set=function(x, value) current[[x]] <<- value
@@ -16,6 +16,7 @@
 #' @param extent Integer scalar specifying the tile extent for all dimensions.
 #' Alternatively, an integer vector of length equal to the number of dimensions,
 #' specifying a different extent for each dimension in the array to be created.
+#' @param cellorder String containing the desired cell order.
 #' @param context A TileDB context object, see \code{\link{tiledb_ctx}} for an example.
 #'
 #' @return
@@ -25,6 +26,7 @@
 #' \item \code{path} defaults to a temporary file in \code{\link{tempdir}}.
 #' \item \code{attr} defaults to \code{"x"}.
 #' \item \code{extent} defaults to \code{100L}.
+#' \item \code{cellorder} defaults to \code{"COL_MAJOR"}.
 #' \item \code{context} defaults to the value of \code{\link{tiledb_ctx}()}.
 #' }
 #' 
@@ -105,5 +107,22 @@ getTileDBContext <- function() {
 #' @rdname TileDBArray-globals
 setTileDBContext <- function(context=NULL) {
     .globals$set("context", context)
+    invisible(NULL)
+}
+
+#' @export
+#' @rdname TileDBArray-globals
+getTileDBCellOrder <- function() {
+    if (is.null(cellorder <- .globals$get("cellorder"))) {
+        "COL_MAJOR"
+    } else {
+        cellorder
+    }
+}
+
+#' @export
+#' @rdname TileDBArray-globals
+setTileDBCellOrder <- function(cellorder=NULL) {
+    .globals$set("cellorder", cellorder)
     invisible(NULL)
 }
