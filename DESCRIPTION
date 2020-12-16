@@ -1,5 +1,5 @@
 Package: TileDBArray
-Version: 1.1.0
+Version: 1.1.1
 Date: 2020-10-05
 Title: Using TileDB as a DelayedArray Backend
 Description: Implements a DelayedArray backend for reading and
@@ -7,7 +7,10 @@ Description: Implements a DelayedArray backend for reading and
     resulting TileDBArrays are compatible with all Bioconductor
     pipelines that can accept DelayedArray instances.
 Authors@R:
-    c(person("Aaron", "Lun", role=c("aut", "cre"), email="infinite.monkeys.with.keyboards@gmail.com"))
+    c(
+        person("Aaron", "Lun", role=c("aut", "cre"), email="infinite.monkeys.with.keyboards@gmail.com"),
+        person("Genentech, Inc.", role="cph")
+    )
 License: MIT + file LICENSE
 Depends:
     DelayedArray (>= 0.15.16)
