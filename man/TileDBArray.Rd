@@ -15,6 +15,7 @@
 \alias{DelayedArray,TileDBArraySeed-method}
 \alias{path,TileDBArraySeed-method}
 \alias{chunkdim,TileDBArraySeed-method}
+\alias{matrixClass,TileDBArray-method}
 \title{Delayed TileDB arrays}
 \description{
 The TileDBArray class provides a \linkS4class{DelayedArray} backend for TileDB arrays (sparse and dense).

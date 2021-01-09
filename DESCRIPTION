@@ -1,6 +1,6 @@
 Package: TileDBArray
-Version: 1.1.1
-Date: 2020-10-05
+Version: 1.1.2
+Date: 2021-01-08
 Title: Using TileDB as a DelayedArray Backend
 Description: Implements a DelayedArray backend for reading and
     writing dense or sparse arrays in the TileDB format. The
