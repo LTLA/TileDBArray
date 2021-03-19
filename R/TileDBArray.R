@@ -65,6 +65,7 @@
 #' DelayedArray,TileDBArraySeed-method
 #' path,TileDBArraySeed-method
 #' chunkdim,TileDBArraySeed-method
+#' matrixClass,TileDBArray-method
 #'
 #' @author Aaron Lun
 #' 
@@ -241,8 +242,11 @@ TileDBArray <- function(x, ...) {
 
 #' @export
 setMethod("DelayedArray", "TileDBArraySeed",
-    function(seed) new_DelayedArray(seed, Class="TileDBMatrix")
+    function(seed) new_DelayedArray(seed, Class="TileDBArray")
 )
+
+#' @export
+setMethod("matrixClass", "TileDBArray", function(x) "TileDBMatrix")
 
 .format_indices <- function(index) {
     ndim <- length(index)
