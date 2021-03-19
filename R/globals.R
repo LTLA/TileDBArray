@@ -27,6 +27,8 @@
 #' \item \code{attr} defaults to \code{"x"}.
 #' \item \code{extent} defaults to \code{100L}.
 #' \item \code{cellorder} defaults to \code{"COL_MAJOR"}.
+#' \item \code{tileorder} defaults to \code{"COL_MAJOR"}.
+#' \item \code{capacity} defaults to \code{10000L}.
 #' \item \code{context} defaults to the value of \code{\link{tiledb_ctx}()}.
 #' }
 #' 
@@ -124,5 +126,39 @@ getTileDBCellOrder <- function() {
 #' @rdname TileDBArray-globals
 setTileDBCellOrder <- function(cellorder=NULL) {
     .globals$set("cellorder", cellorder)
+    invisible(NULL)
+}
+
+#' @export
+#' @rdname TileDBArray-globals
+getTileDBTileOrder <- function() {
+    if (is.null(tileorder <- .globals$get("tileorder"))) {
+        "COL_MAJOR"
+    } else {
+        tileorder
+    }
+}
+
+#' @export
+#' @rdname TileDBArray-globals
+setTileDBTileOrder <- function(tileorder=NULL) {
+    .globals$set("tileorder", tileorder)
+    invisible(NULL)
+}
+
+#' @export
+#' @rdname TileDBArray-globals
+getTileDBCapacity <- function() {
+    if (is.null(capacity <- .globals$get("capacity"))) {
+        10000L  
+    } else {
+        capacity 
+    }
+}
+
+#' @export
+#' @rdname TileDBArray-globals
+setTileDBCapacity <- function(capacity=NULL) {
+    .globals$set("capacity", capacity)
     invisible(NULL)
 }

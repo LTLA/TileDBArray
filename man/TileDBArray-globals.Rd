@@ -12,6 +12,10 @@
 \alias{setTileDBContext}
 \alias{getTileDBCellOrder}
 \alias{setTileDBCellOrder}
+\alias{getTileDBTileOrder}
+\alias{setTileDBTileOrder}
+\alias{getTileDBCapacity}
+\alias{setTileDBCapacity}
 \title{TileDBArray global options}
 \usage{
 getTileDBPath()
@@ -33,6 +37,14 @@ setTileDBContext(context = NULL)
 getTileDBCellOrder()
 
 setTileDBCellOrder(cellorder = NULL)
+
+getTileDBTileOrder()
+
+setTileDBTileOrder(tileorder = NULL)
+
+getTileDBCapacity()
+
+setTileDBCapacity(capacity = NULL)
 }
 \arguments{
 \item{path}{String containing a path to a TileDB backend.}
@@ -55,6 +67,8 @@ or a default value if the former is \code{NULL}:
 \item \code{attr} defaults to \code{"x"}.
 \item \code{extent} defaults to \code{100L}.
 \item \code{cellorder} defaults to \code{"COL_MAJOR"}.
+\item \code{tileorder} defaults to \code{"COL_MAJOR"}.
+\item \code{capacity} defaults to \code{10000L}.
 \item \code{context} defaults to the value of \code{\link{tiledb_ctx}()}.
 }
 
