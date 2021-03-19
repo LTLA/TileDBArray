@@ -10,6 +10,12 @@
 \alias{setTileDBExtent}
 \alias{getTileDBContext}
 \alias{setTileDBContext}
+\alias{getTileDBCellOrder}
+\alias{setTileDBCellOrder}
+\alias{getTileDBTileOrder}
+\alias{setTileDBTileOrder}
+\alias{getTileDBCapacity}
+\alias{setTileDBCapacity}
 \title{TileDBArray global options}
 \usage{
 getTileDBPath()
@@ -27,6 +33,18 @@ setTileDBExtent(extent = NULL)
 getTileDBContext()
 
 setTileDBContext(context = NULL)
+
+getTileDBCellOrder()
+
+setTileDBCellOrder(cellorder = NULL)
+
+getTileDBTileOrder()
+
+setTileDBTileOrder(tileorder = NULL)
+
+getTileDBCapacity()
+
+setTileDBCapacity(capacity = NULL)
 }
 \arguments{
 \item{path}{String containing a path to a TileDB backend.}
@@ -38,6 +56,12 @@ Alternatively, an integer vector of length equal to the number of dimensions,
 specifying a different extent for each dimension in the array to be created.}
 
 \item{context}{A TileDB context object, see \code{\link{tiledb_ctx}} for an example.}
+
+\item{cellorder}{String specifying the desired cell order.}
+
+\item{tileorder}{String specifying the desired tile order.}
+
+\item{capacity}{Integer scalar specifying the data tile capacity for sparse arrays.}
 }
 \value{
 All of the getter functions return the current global value,
@@ -46,6 +70,9 @@ or a default value if the former is \code{NULL}:
 \item \code{path} defaults to a temporary file in \code{\link{tempdir}}.
 \item \code{attr} defaults to \code{"x"}.
 \item \code{extent} defaults to \code{100L}.
+\item \code{cellorder} defaults to \code{"COL_MAJOR"}.
+\item \code{tileorder} defaults to \code{"COL_MAJOR"}.
+\item \code{capacity} defaults to \code{10000L}.
 \item \code{context} defaults to the value of \code{\link{tiledb_ctx}()}.
 }
 

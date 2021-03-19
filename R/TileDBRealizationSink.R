@@ -11,6 +11,9 @@
 #'     attr=getTileDBAttr(), 
 #'     sparse=FALSE,
 #'     extent=getTileDBExtent(), 
+#'     cellorder=getTileDBCellOrder(),
+#'     tileorder=getTileDBTileOrder(),
+#'     capacity=getTileDBCapacity(),
 #'     context=getTileDBContext()
 #' )}
 #' returns a TileDBRealizationSink object that can be used to write content to a TileDB backend.
@@ -23,9 +26,12 @@
 #' Currently only numeric, logical and integer arrays are supported.
 #' \item \code{path}, a string containing the location of the new TileDB backend.
 #' \item \code{attr}, a string specifying the name of the attribute to store.
-#' \item \code{sparse} is a logical scalar indicating whether the array should be stored in sparse form.
-#' \item \code{extent} is an integer scalar (or vector of length equal to \code{dim})
-#' specifying the tile extent for each dimension.
+#' \item \code{sparse}, a logical scalar indicating whether the array should be stored in sparse form.
+#' \item \code{extent}, an integer scalar (or vector of length equal to \code{dim}) specifying the tile extent for each dimension.
+#' Larger values improve compression at the cost of unnecessary data extraction during reads. 
+#' \item \code{cellorder}, a string specifying the ordering of cells within each tile.
+#' \item \code{tileorder}, a string specifying the ordering of tiles across the array.
+#' \item \code{capacity}, an integer scalar specifying the size of each data tile in the sparse case.
 #' \item \code{context} is the TileDB context, defaulting to the output of \code{\link{tiledb_ctx}()}.
 #' }
 #'
@@ -46,7 +52,7 @@
 #' \code{as(x, "TileDBArraySeed")} will coerce a TileDBRealizationSink \code{x} to a TileDBArraySeed object.
 #'
 #' \code{as(x, "DelayedArray")} will coerce a TileDBRealizationSink \code{x} to a TileDBArray object.
-#' 
+#'
 #' @section Sink internals:
 #' \code{write_block(sink, viewport, block)} will write the subarray \code{block} to the TileDBRealizationSink \code{sink}
 #' at the specified \code{viewport}, returning \code{sink} upon completion.
@@ -100,8 +106,15 @@
 NULL
 
 #' @export
-TileDBRealizationSink <- function(dim, dimnames=NULL, type="double", path=getTileDBPath(), 
-    attr=getTileDBAttr(), sparse=FALSE, extent=getTileDBExtent(), context=getTileDBContext())
+TileDBRealizationSink <- function(dim, dimnames=NULL, type="double", 
+    path=getTileDBPath(), 
+    attr=getTileDBAttr(), 
+    sparse=FALSE, 
+    extent=getTileDBExtent(), 
+    cellorder=getTileDBCellOrder(),
+    tileorder=getTileDBTileOrder(),
+    capacity=getTileDBCapacity(),
+    context=getTileDBContext())
 {
     collected <- vector("list", length(dim))
     extent <- rep(as.integer(extent), length(dim))
@@ -112,8 +125,12 @@ TileDBRealizationSink <- function(dim, dimnames=NULL, type="double", path=getTil
     dom <- tiledb_domain(ctx=context, dims=collected)
 
     val <- r_to_tiledb_type(vector(type))
-    schema <- tiledb_array_schema(ctx=context, dom, sparse=sparse,
-        attrs=list(tiledb_attr(ctx=context, attr, type=val)))
+    schema <- tiledb_array_schema(ctx=context, dom, 
+        sparse=sparse,
+        attrs=list(tiledb_attr(ctx=context, attr, type=val)),
+        cell_order = cellorder,
+        tile_order = tileorder,
+        capacity = capacity)
 
     if (is.null(path)) {
         path <- tempfile()

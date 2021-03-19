@@ -26,6 +26,9 @@ Write array data to a TileDB backend via \pkg{DelayedArray}'s \linkS4class{Reali
     attr=getTileDBAttr(), 
     sparse=FALSE,
     extent=getTileDBExtent(), 
+    cellorder=getTileDBCellOrder(),
+    tileorder=getTileDBTileOrder(),
+    capacity=getTileDBCapacity(),
     context=getTileDBContext()
 )}
 returns a TileDBRealizationSink object that can be used to write content to a TileDB backend.
@@ -38,9 +41,12 @@ Defaults to \code{NULL}, i.e., no dimnames.
 Currently only numeric, logical and integer arrays are supported.
 \item \code{path}, a string containing the location of the new TileDB backend.
 \item \code{attr}, a string specifying the name of the attribute to store.
-\item \code{sparse} is a logical scalar indicating whether the array should be stored in sparse form.
-\item \code{extent} is an integer scalar (or vector of length equal to \code{dim})
-specifying the tile extent for each dimension.
+\item \code{sparse}, a logical scalar indicating whether the array should be stored in sparse form.
+\item \code{extent}, an integer scalar (or vector of length equal to \code{dim}) specifying the tile extent for each dimension.
+Larger values improve compression at the cost of unnecessary data extraction during reads. 
+\item \code{cellorder}, a string specifying the ordering of cells within each tile.
+\item \code{tileorder}, a string specifying the ordering of tiles across the array.
+\item \code{capacity}, an integer scalar specifying the size of each data tile in the sparse case.
 \item \code{context} is the TileDB context, defaulting to the output of \code{\link{tiledb_ctx}()}.
 }
 
