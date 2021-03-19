@@ -16,7 +16,9 @@
 #' @param extent Integer scalar specifying the tile extent for all dimensions.
 #' Alternatively, an integer vector of length equal to the number of dimensions,
 #' specifying a different extent for each dimension in the array to be created.
-#' @param cellorder String containing the desired cell order.
+#' @param cellorder String specifying the desired cell order.
+#' @param tileorder String specifying the desired tile order.
+#' @param capacity Integer scalar specifying the data tile capacity for sparse arrays.
 #' @param context A TileDB context object, see \code{\link{tiledb_ctx}} for an example.
 #'
 #' @return

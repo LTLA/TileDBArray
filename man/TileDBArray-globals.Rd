@@ -57,7 +57,11 @@ specifying a different extent for each dimension in the array to be created.}
 
 \item{context}{A TileDB context object, see \code{\link{tiledb_ctx}} for an example.}
 
-\item{cellorder}{String containing the desired cell order.}
+\item{cellorder}{String specifying the desired cell order.}
+
+\item{tileorder}{String specifying the desired tile order.}
+
+\item{capacity}{Integer scalar specifying the data tile capacity for sparse arrays.}
 }
 \value{
 All of the getter functions return the current global value,
