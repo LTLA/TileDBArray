@@ -137,23 +137,19 @@ TileDBRealizationSink <- function(dim, dimnames=NULL, type="double",
     }
 
     tiledb_array_create(path, schema)
-    .edit_metadata(path, attr, sparse=sparse, type=type, dimnames=dimnames)
+    .edit_metadata(path, sparse=sparse, type=type, dimnames=dimnames)
 
     new("TileDBRealizationSink", dim=dim, type=type, path=path, sparse=sparse, attr=attr)
 }
 
-.edit_metadata <- function(path, attr, sparse, type, dimnames) {
+.edit_metadata <- function(path, sparse, type, dimnames) {
     has.logical <- type=="logical"
     has.dimnames <- !is.null(dimnames) && !all(vapply(dimnames, is.null, FALSE))
     if (!has.logical && !has.dimnames) {
         return(NULL)
     }
 
-    if (sparse) {
-        obj <- tiledb_sparse(path, attrs=attr)
-    } else {
-        obj <- tiledb_dense(path, attrs=attr)
-    }
+    obj <- tiledb_array(path)
     on.exit(tiledb_array_close(obj))
     obj <- tiledb_array_open(obj, "WRITE") # not sure why it doesn't work with query_type="WRITE".
 
@@ -184,11 +180,10 @@ setValidity2("TileDBRealizationSink", function(object) {
 #' @importFrom DelayedArray start width
 setMethod("write_block", "TileDBRealizationSink", function(sink, viewport, block) {
     starts <- start(viewport) - 1L
+    obj <- tiledb_array(sink@path, attrs=sink@attr, query_type="WRITE")
+    on.exit(tiledb_array_close(obj))
 
     if (sink@sparse) {
-        obj <- tiledb_array(sink@path, attrs=sink@attr, query_type="WRITE")
-        on.exit(tiledb_array_close(obj))
-
         # Need this because SparseArraySeed doesn't follow a matrix abstraction.
         if (is(block, "SparseArraySeed")) {
             store <- data.frame(
@@ -209,9 +204,6 @@ setMethod("write_block", "TileDBRealizationSink", function(sink, viewport, block
         obj[] <- store
 
     } else {
-        obj <- tiledb_dense(sink@path, attrs=sink@attr, query_type="WRITE")
-        on.exit(tiledb_array_close(obj))
-
         args <- lapply(width(viewport), seq_len)
         args <- mapply(FUN="+", starts, args, SIMPLIFY=FALSE)
 

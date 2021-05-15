@@ -110,7 +110,7 @@ TileDBArraySeed <- function(x, attr) {
         stop("'attr' refers to an unsupported type")
     }
     
-    meta <- .get_metadata(x, attr, sparse=is.sparse(s))
+    meta <- .get_metadata(x, sparse=is.sparse(s))
     if (my.type=="integer" && identical(meta$type, "logical")) {
         my.type <- meta$type
     }
@@ -124,15 +124,10 @@ TileDBArraySeed <- function(x, attr) {
         sparse=is.sparse(s), attr=attr, type=my.type, extent=meta$extent)
 }
 
-.get_metadata <- function(path, attr, sparse) {
-    if (sparse) {
-        obj <- tiledb_sparse(path, attrs=attr)
-    } else {
-        obj <- tiledb_dense(path, attrs=attr)
-    }
-
-    obj <- tiledb_array_open(obj, "READ")
+.get_metadata <- function(path, sparse) {
+    obj <- tiledb_array(path)
     on.exit(tiledb_array_close(obj), add=TRUE)
+    obj <- tiledb_array_open(obj, "READ")
 
     type <- tiledb_get_metadata(obj, "type")
 
@@ -201,11 +196,12 @@ setMethod("extract_array", "TileDBArraySeed", function(x, index) {
         return(output)
     }
 
-    obj <- tiledb_array(path(x), attrs=x@attr, query_type="READ", as.data.frame=TRUE)
+#    obj <- tiledb_array(path(x), attrs=x@attr, query_type="READ", as.data.frame=TRUE)
+    obj <- tiledb_array(path(x), query_type="READ", as.data.frame=TRUE)
     on.exit(tiledb_array_close(obj))
 
     # Can't help but feel this is not the most efficient way to do it.
-    df <- .extract_values(obj, index)
+    df <- .extract_values(obj, index, x@attr)
     output[df$indices] <- as(df$values, type(x))
     output
 })
@@ -277,7 +273,7 @@ setMethod("matrixClass", "TileDBArray", function(x) "TileDBMatrix")
     list(contiguous=contiguous, remapping=remapping)
 }
 
-.extract_values <- function(obj, indices) {
+.extract_values <- function(obj, indices, attr) {
     index.info <- .format_indices(indices)
     selected_ranges(obj) <- index.info$contiguous
     extracted <- obj[]
@@ -288,6 +284,7 @@ setMethod("matrixClass", "TileDBArray", function(x) "TileDBMatrix")
 
     list(
         indices=output$indices,
-        values=rep.int(extracted[[ndim + 1L]], output$expand)
+#        values=rep.int(extracted[[ndim + 1L]], output$expand)
+        values=rep.int(extracted[[attr]], output$expand)
     )
 }
