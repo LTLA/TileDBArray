@@ -227,7 +227,7 @@ setMethod("extract_sparse_array", "TileDBArraySeed", function(x, index) {
     obj <- tiledb_array(path(x), attrs=x@attr, query_type="READ")
     on.exit(tiledb_array_close(obj))
 
-    df <- .extract_values(obj, index)
+    df <- .extract_values(obj, index, x@attr)
     SparseArraySeed(d2, nzindex=df$indices, nzdata=as(df$values, type(x)))
 })
 
