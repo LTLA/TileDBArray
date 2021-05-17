@@ -180,11 +180,10 @@ setValidity2("TileDBRealizationSink", function(object) {
 #' @importFrom DelayedArray start width
 setMethod("write_block", "TileDBRealizationSink", function(sink, viewport, block) {
     starts <- start(viewport) - 1L
+    obj <- tiledb_array(sink@path, attrs=sink@attr, query_type="WRITE")
+    on.exit(tiledb_array_close(obj))
 
     if (sink@sparse) {
-        obj <- tiledb_array(sink@path, attrs=sink@attr, query_type="WRITE")
-        on.exit(tiledb_array_close(obj))
-
         # Need this because SparseArraySeed doesn't follow a matrix abstraction.
         if (is(block, "SparseArraySeed")) {
             store <- data.frame(
@@ -205,9 +204,6 @@ setMethod("write_block", "TileDBRealizationSink", function(sink, viewport, block
         obj[] <- store
 
     } else {
-        obj <- tiledb_dense(sink@path, attrs=sink@attr, query_type="WRITE")
-        on.exit(tiledb_array_close(obj))
-
         args <- lapply(width(viewport), seq_len)
         args <- mapply(FUN="+", starts, args, SIMPLIFY=FALSE)
 
