@@ -196,12 +196,10 @@ setMethod("extract_array", "TileDBArraySeed", function(x, index) {
         return(output)
     }
 
-#    obj <- tiledb_array(path(x), attrs=x@attr, query_type="READ", as.data.frame=TRUE)
-    obj <- tiledb_array(path(x), query_type="READ", as.data.frame=TRUE)
+    obj <- tiledb_array(path(x), attrs=x@attr, query_type="READ", as.data.frame=TRUE)
     on.exit(tiledb_array_close(obj))
 
-    # Can't help but feel this is not the most efficient way to do it.
-    df <- .extract_values(obj, index, x@attr)
+    df <- .extract_values(obj, index)
     output[df$indices] <- as(df$values, type(x))
     output
 })
@@ -227,7 +225,7 @@ setMethod("extract_sparse_array", "TileDBArraySeed", function(x, index) {
     obj <- tiledb_array(path(x), attrs=x@attr, query_type="READ")
     on.exit(tiledb_array_close(obj))
 
-    df <- .extract_values(obj, index, x@attr)
+    df <- .extract_values(obj, index)
     SparseArraySeed(d2, nzindex=df$indices, nzdata=as(df$values, type(x)))
 })
 
@@ -273,7 +271,7 @@ setMethod("matrixClass", "TileDBArray", function(x) "TileDBMatrix")
     list(contiguous=contiguous, remapping=remapping)
 }
 
-.extract_values <- function(obj, indices, attr) {
+.extract_values <- function(obj, indices) {
     index.info <- .format_indices(indices)
     selected_ranges(obj) <- index.info$contiguous
     extracted <- obj[]
@@ -284,7 +282,6 @@ setMethod("matrixClass", "TileDBArray", function(x) "TileDBMatrix")
 
     list(
         indices=output$indices,
-#        values=rep.int(extracted[[ndim + 1L]], output$expand)
-        values=rep.int(extracted[[attr]], output$expand)
+        values=rep.int(extracted[[ndim + 1L]], output$expand)
     )
 }
