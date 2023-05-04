@@ -11,7 +11,7 @@
 \alias{is_sparse,TileDBArraySeed-method}
 \alias{type,TileDBArraySeed-method}
 \alias{extract_array,TileDBArraySeed-method}
-\alias{extract_sparse_array,TileDBArraySeed-method}
+\alias{OLD_extract_sparse_array,TileDBArraySeed-method}
 \alias{DelayedArray,TileDBArraySeed-method}
 \alias{path,TileDBArraySeed-method}
 \alias{chunkdim,TileDBArraySeed-method}
@@ -49,7 +49,7 @@ subsetted to the indices specified in \code{index}.
 The latter should be a list of length equal to the number of dimensions in \code{x},
 where each entry is an integer vector or \code{NULL} (in which case the entirety of the dimension is used).
 
-\code{\link{extract_sparse_array}(x, index)} will return a \linkS4class{SparseArraySeed}
+\code{\link{OLD_extract_sparse_array}(x, index)} will return a \linkS4class{SparseArraySeed}
 containing the indices of non-zero entries in \code{x}, subsetted to the indices in \code{index}.
 The latter should be a list of the same structure as described for \code{extract_array}.
 

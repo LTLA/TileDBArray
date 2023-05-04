@@ -28,7 +28,7 @@
 #' The latter should be a list of length equal to the number of dimensions in \code{x},
 #' where each entry is an integer vector or \code{NULL} (in which case the entirety of the dimension is used).
 #'
-#' \code{\link{extract_sparse_array}(x, index)} will return a \linkS4class{SparseArraySeed}
+#' \code{\link{OLD_extract_sparse_array}(x, index)} will return a \linkS4class{SparseArraySeed}
 #' containing the indices of non-zero entries in \code{x}, subsetted to the indices in \code{index}.
 #' The latter should be a list of the same structure as described for \code{extract_array}.
 #'
@@ -61,7 +61,7 @@
 #' is_sparse,TileDBArraySeed-method
 #' type,TileDBArraySeed-method
 #' extract_array,TileDBArraySeed-method
-#' extract_sparse_array,TileDBArraySeed-method
+#' OLD_extract_sparse_array,TileDBArraySeed-method
 #' DelayedArray,TileDBArraySeed-method
 #' path,TileDBArraySeed-method
 #' chunkdim,TileDBArraySeed-method
@@ -215,7 +215,7 @@ setMethod("extract_array", "TileDBArraySeed", function(x, index) {
 }
 
 #' @export
-setMethod("extract_sparse_array", "TileDBArraySeed", function(x, index) {
+setMethod("OLD_extract_sparse_array", "TileDBArraySeed", function(x, index) {
     d2 <- .get_block_dims(x, index)
     if (any(d2==0L)) {
         fill <- switch(type(x), double=0, integer=0L, logical=FALSE)
