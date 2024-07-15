@@ -28,8 +28,8 @@
 #' The latter should be a list of length equal to the number of dimensions in \code{x},
 #' where each entry is an integer vector or \code{NULL} (in which case the entirety of the dimension is used).
 #'
-#' \code{\link{OLD_extract_sparse_array}(x, index)} will return a \linkS4class{SparseArraySeed}
-#' containing the indices of non-zero entries in \code{x}, subsetted to the indices in \code{index}.
+#' \code{\link{extract_sparse_array}(x, index)} will return a \linkS4class{COO_SparseArray}
+#' representing the subset of \code{x} corresponding to the indices in \code{index}.
 #' The latter should be a list of the same structure as described for \code{extract_array}.
 #'
 #' \code{\link{type}(x)} will return a string containing the type of the TileDBArraySeed object \code{x}.
@@ -61,7 +61,7 @@
 #' is_sparse,TileDBArraySeed-method
 #' type,TileDBArraySeed-method
 #' extract_array,TileDBArraySeed-method
-#' OLD_extract_sparse_array,TileDBArraySeed-method
+#' extract_sparse_array,TileDBArraySeed-method
 #' DelayedArray,TileDBArraySeed-method
 #' path,TileDBArraySeed-method
 #' chunkdim,TileDBArraySeed-method
@@ -215,18 +215,18 @@ setMethod("extract_array", "TileDBArraySeed", function(x, index) {
 }
 
 #' @export
-setMethod("OLD_extract_sparse_array", "TileDBArraySeed", function(x, index) {
+#' @importFrom SparseArray extract_sparse_array COO_SparseArray
+setMethod("extract_sparse_array", "TileDBArraySeed", function(x, index) {
     d2 <- .get_block_dims(x, index)
     if (any(d2==0L)) {
-        fill <- switch(type(x), double=0, integer=0L, logical=FALSE)
-        return(SparseArraySeed(d2, nzindex=matrix(0L, 0, length(index)), nzdata=fill[0]))
+        return(COO_SparseArray(d2, nzdata=vector(type(x))))
     }
 
     obj <- tiledb_array(path(x), attrs=x@attr, query_type="READ")
     on.exit(tiledb_array_close(obj))
 
     df <- .extract_values(obj, index)
-    SparseArraySeed(d2, nzindex=df$indices, nzdata=as(df$values, type(x)))
+    COO_SparseArray(d2, nzcoo=df$indices, nzdata=as(df$values, type(x)))
 })
 
 #' @export

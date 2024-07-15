@@ -1,6 +1,6 @@
 Package: TileDBArray
-Version: 1.15.0
-Date: 2023-05-03
+Version: 1.15.1
+Date: 2024-07-13
 Title: Using TileDB as a DelayedArray Backend
 Description: Implements a DelayedArray backend for reading and
     writing dense or sparse arrays in the TileDB format. The
@@ -13,7 +13,8 @@ Authors@R:
     )
 License: MIT + file LICENSE
 Depends:
-    DelayedArray (>= 0.27.2)
+    SparseArray (>= 1.5.20),
+    DelayedArray (>= 0.31.7)
 Imports: 
     methods,
     Rcpp,
@@ -31,5 +32,5 @@ biocViews: DataRepresentation, Infrastructure, Software
 VignetteBuilder: knitr
 BugReports: https://github.com/LTLA/TileDBArray
 URL: https://github.com/LTLA/TileDBArray
-RoxygenNote: 7.1.1
+RoxygenNote: 7.3.2
 Encoding: UTF-8

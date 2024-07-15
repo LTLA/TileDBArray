@@ -177,6 +177,8 @@ setValidity2("TileDBRealizationSink", function(object) {
 })
 
 #' @export
+#' @importClassesFrom SparseArray COO_SparseArray
+#' @importFrom SparseArray nzcoo nzdata nzwhich
 #' @importFrom DelayedArray start width
 setMethod("write_block", "TileDBRealizationSink", function(sink, viewport, block) {
     starts <- start(viewport) - 1L
@@ -184,15 +186,15 @@ setMethod("write_block", "TileDBRealizationSink", function(sink, viewport, block
     on.exit(tiledb_array_close(obj))
 
     if (sink@sparse) {
-        # Need this because SparseArraySeed doesn't follow a matrix abstraction.
-        if (is(block, "SparseArraySeed")) {
+        # Need this because COO_SparseArray doesn't support [.
+        if (is(block, "COO_SparseArray")) {
             store <- data.frame(
-                d1=nzindex(block)[,1] + starts[1],
-                d2=nzindex(block)[,2] + starts[2],
+                d1=nzcoo(block)[,1] + starts[1],
+                d2=nzcoo(block)[,2] + starts[2],
                 sink=nzdata(block)
             )
         } else {
-            idx <- which(block!=0, arr.ind=TRUE)
+            idx <- nzwhich(block, arr.ind=TRUE)
             store <- data.frame(
                 d1=idx[,1] + starts[1],
                 d2=idx[,2] + starts[2],
@@ -207,7 +209,8 @@ setMethod("write_block", "TileDBRealizationSink", function(sink, viewport, block
         args <- lapply(width(viewport), seq_len)
         args <- mapply(FUN="+", starts, args, SIMPLIFY=FALSE)
 
-        # Need to coerce the block, because it could be a SparseArraySeed.
+        # Need to coerce the block, because it could be a SparseArray
+        # derivative.
         args <- c(list(sink=obj), args, list(value=as.array(block)))
         do.call("[<-", args)
     }
