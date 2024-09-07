@@ -196,7 +196,7 @@ setMethod("extract_array", "TileDBArraySeed", function(x, index) {
         return(output)
     }
 
-    obj <- tiledb_array(path(x), attrs=x@attr, query_type="READ", as.data.frame=TRUE)
+    obj <- tiledb_array(path(x), attrs=x@attr, query_type="READ", return_as="data.frame")
     on.exit(tiledb_array_close(obj))
 
     df <- .extract_values(obj, index)
