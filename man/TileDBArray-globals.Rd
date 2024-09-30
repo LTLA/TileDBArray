@@ -6,6 +6,8 @@
 \alias{setTileDBPath}
 \alias{getTileDBAttr}
 \alias{setTileDBAttr}
+\alias{getTileDBDimType}
+\alias{setTileDBDimType}
 \alias{getTileDBExtent}
 \alias{setTileDBExtent}
 \alias{getTileDBContext}
@@ -25,6 +27,10 @@ setTileDBPath(path = NULL)
 getTileDBAttr()
 
 setTileDBAttr(attr = NULL)
+
+getTileDBDimType()
+
+setTileDBDimType(dimtype = NULL)
 
 getTileDBExtent()
 
@@ -51,6 +57,8 @@ setTileDBCapacity(capacity = NULL)
 
 \item{attr}{String containing the name of a TileDB attribute.}
 
+\item{dimtype}{String specifying the TileDB datatype to use for the dimensions.}
+
 \item{extent}{Integer scalar specifying the tile extent for all dimensions.
 Alternatively, an integer vector of length equal to the number of dimensions,
 specifying a different extent for each dimension in the array to be created.}
@@ -69,6 +77,7 @@ or a default value if the former is \code{NULL}:
 \itemize{
 \item \code{path} defaults to a temporary file in \code{\link{tempdir}}.
 \item \code{attr} defaults to \code{"x"}.
+\item \code{dimtype} defaults to \code{"INT32"}.
 \item \code{extent} defaults to \code{100L}.
 \item \code{cellorder} defaults to \code{"COL_MAJOR"}.
 \item \code{tileorder} defaults to \code{"COL_MAJOR"}.

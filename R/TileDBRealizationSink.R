@@ -9,6 +9,8 @@
 #'     type="double", 
 #'     path=getTileDBPath(), 
 #'     attr=getTileDBAttr(), 
+#'     storagetype=NULL,
+#'     dimtype=getTileDBDimType(),
 #'     sparse=FALSE,
 #'     extent=getTileDBExtent(), 
 #'     cellorder=getTileDBCellOrder(),
@@ -22,10 +24,13 @@
 #' \item \code{dim}, an integer vector (usually of length 2) to specify the array dimensions.
 #' \item \code{dimnames}, a list of length equal to \code{dim}, containing character vectors with names for each dimension.
 #' Defaults to \code{NULL}, i.e., no dimnames.
-#' \item \code{type}, a string specifying the data type.
-#' Currently only numeric, logical and integer arrays are supported.
+#' \item \code{type}, a string specifying the R data type for the newly written array.
+#' Currently only \code{"double"}, \code{"integer"} and \code{"logical"} arrays are supported.
 #' \item \code{path}, a string containing the location of the new TileDB backend.
 #' \item \code{attr}, a string specifying the name of the attribute to store.
+#' \item \code{storagetype}, a string specifying the TileDB data type for the attribute, e.g., \code{"UINT8"}, \code{"FLOAT32"}.
+#' If \code{NULL}, this is automatically determined from \code{type} using \code{\link{r_to_tiledb_type}}.
+#' \item \code{dimtype}, a string specifying the TileDB data type for the dimension.
 #' \item \code{sparse}, a logical scalar indicating whether the array should be stored in sparse form.
 #' \item \code{extent}, an integer scalar (or vector of length equal to \code{dim}) specifying the tile extent for each dimension.
 #' Larger values improve compression at the cost of unnecessary data extraction during reads. 
@@ -106,9 +111,14 @@
 NULL
 
 #' @export
-TileDBRealizationSink <- function(dim, dimnames=NULL, type="double", 
+TileDBRealizationSink <- function(
+    dim,
+    dimnames=NULL,
+    type="double", 
     path=getTileDBPath(), 
     attr=getTileDBAttr(), 
+    storagetype=NULL,
+    dimtype=getTileDBDimType(),
     sparse=FALSE, 
     extent=getTileDBExtent(), 
     cellorder=getTileDBCellOrder(),
@@ -120,17 +130,23 @@ TileDBRealizationSink <- function(dim, dimnames=NULL, type="double",
     extent <- rep(as.integer(extent), length(dim))
     for (i in seq_along(dim)) {
         ex <- min(extent[i], dim[i])
-        collected[[i]] <- tiledb_dim(ctx=context, paste0("d", i), c(1L, dim[i]), tile=ex, type="INT32")
+        collected[[i]] <- tiledb_dim(ctx=context, paste0("d", i), c(1L, dim[i]), tile=ex, type=dimtype)
     }
     dom <- tiledb_domain(ctx=context, dims=collected)
 
-    val <- r_to_tiledb_type(vector(type))
-    schema <- tiledb_array_schema(ctx=context, dom, 
+    if (is.null(storagetype)) {
+        storagetype <- r_to_tiledb_type(vector(type))
+    }
+
+    schema <- tiledb_array_schema(
+        ctx=context,
+        domain=dom, 
         sparse=sparse,
-        attrs=list(tiledb_attr(ctx=context, attr, type=val)),
+        attrs=list(tiledb_attr(ctx=context, attr, type=storagetype)),
         cell_order = cellorder,
         tile_order = tileorder,
-        capacity = capacity)
+        capacity = capacity
+    )
 
     if (is.null(path)) {
         path <- tempfile()

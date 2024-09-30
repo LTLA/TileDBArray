@@ -24,6 +24,8 @@ Write array data to a TileDB backend via \pkg{DelayedArray}'s \linkS4class{Reali
     type="double", 
     path=getTileDBPath(), 
     attr=getTileDBAttr(), 
+    storagetype=NULL,
+    dimtype=getTileDBDimType(),
     sparse=FALSE,
     extent=getTileDBExtent(), 
     cellorder=getTileDBCellOrder(),
@@ -37,10 +39,13 @@ It accepts the following arguments:
 \item \code{dim}, an integer vector (usually of length 2) to specify the array dimensions.
 \item \code{dimnames}, a list of length equal to \code{dim}, containing character vectors with names for each dimension.
 Defaults to \code{NULL}, i.e., no dimnames.
-\item \code{type}, a string specifying the data type.
-Currently only numeric, logical and integer arrays are supported.
+\item \code{type}, a string specifying the R data type for the newly written array.
+Currently only \code{"double"}, \code{"integer"} and \code{"logical"} arrays are supported.
 \item \code{path}, a string containing the location of the new TileDB backend.
 \item \code{attr}, a string specifying the name of the attribute to store.
+\item \code{storagetype}, a string specifying the TileDB data type for the attribute, e.g., \code{"UINT8"}, \code{"FLOAT32"}.
+If \code{NULL}, this is automatically determined from \code{type} using \code{\link{r_to_tiledb_type}}.
+\item \code{dimtype}, a string specifying the TileDB data type for the dimension.
 \item \code{sparse}, a logical scalar indicating whether the array should be stored in sparse form.
 \item \code{extent}, an integer scalar (or vector of length equal to \code{dim}) specifying the tile extent for each dimension.
 Larger values improve compression at the cost of unnecessary data extraction during reads. 

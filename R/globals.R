@@ -1,5 +1,5 @@
 .globals <- (function () {
-    current <- list(path=NULL, attr=NULL, sparse=NULL, tile=NULL, cellorder=NULL, ctx=NULL)
+    current <- list(path=NULL, attr=NULL, dimtype=NULL, tile=NULL, cellorder=NULL, ctx=NULL)
     list(
         get=function(x) current[[x]],
         set=function(x, value) current[[x]] <<- value
@@ -13,6 +13,7 @@
 #'
 #' @param path String containing a path to a TileDB backend.
 #' @param attr String containing the name of a TileDB attribute.
+#' @param dimtype String specifying the TileDB datatype to use for the dimensions.
 #' @param extent Integer scalar specifying the tile extent for all dimensions.
 #' Alternatively, an integer vector of length equal to the number of dimensions,
 #' specifying a different extent for each dimension in the array to be created.
@@ -27,6 +28,7 @@
 #' \itemize{
 #' \item \code{path} defaults to a temporary file in \code{\link{tempdir}}.
 #' \item \code{attr} defaults to \code{"x"}.
+#' \item \code{dimtype} defaults to \code{"INT32"}.
 #' \item \code{extent} defaults to \code{100L}.
 #' \item \code{cellorder} defaults to \code{"COL_MAJOR"}.
 #' \item \code{tileorder} defaults to \code{"COL_MAJOR"}.
@@ -67,7 +69,7 @@ setTileDBPath <- function(path=NULL) {
 #' @rdname TileDBArray-globals
 getTileDBAttr <- function() {
     if (is.null(attr <- .globals$get("attr"))) {
-        "x" 
+        "x"
     } else {
         attr
     }
@@ -77,6 +79,23 @@ getTileDBAttr <- function() {
 #' @rdname TileDBArray-globals
 setTileDBAttr <- function(attr=NULL) {
     .globals$set("attr", attr)
+    invisible(NULL)
+}
+
+#' @export
+#' @rdname TileDBArray-globals
+getTileDBDimType <- function() {
+    if (is.null(dimtype <- .globals$get("dimtype"))) {
+        "INT32" 
+    } else {
+        dimtype
+    }
+}
+
+#' @export
+#' @rdname TileDBArray-globals
+setTileDBDimType <- function(dimtype=NULL) {
+    .globals$set("dimtype", dimtype)
     invisible(NULL)
 }
 
