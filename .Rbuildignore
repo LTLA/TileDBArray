@@ -1,6 +1,2 @@
-^\.travis\.yml$
-^TileDBArray_.*\.tar\.gz$
-^\.travis\.yml.prev$
-^\.travis\.yml.release$
-^scripts
 ^\.gitignore$
+^\.github$
