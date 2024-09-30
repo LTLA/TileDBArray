@@ -73,6 +73,19 @@ test_that("responds to the path", {
     expect_null(getTileDBPath())
 })
 
+test_that("stores non-unity offsets correctly", {
+    path <- tempfile()
+    expect_false(file.exists(path))
+    out <- writeTileDBArray(DD, path=path, offset=c(-5, 10))
+    expect_true(file.exists(path))
+
+    x <- tiledb::tiledb_array(path)
+    s <- tiledb::schema(x)
+    dims <- tiledb::dimensions(s)
+    doms <- lapply(dims, tiledb::domain)
+    expect_identical(c(-5L, 10L), vapply(doms, function(x) x[1L], 0L))
+})
+
 test_that("other global variables behave as expected", {
     expect_identical(getTileDBExtent(), 100L)
     setTileDBExtent(50L)

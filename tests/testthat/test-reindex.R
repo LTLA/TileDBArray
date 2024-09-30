@@ -3,15 +3,16 @@
 
 library(S4Vectors)
 
-REF <- function(df, index) {
+REF <- function(df, index, dim, offset=rep(1L, length(dim))) {
     ndim <- length(index)
 
     # Assuming that the first 'ndim' columns of 'out' are indices.
     for (i in seq_len(ndim)) {
         cur.index <- index[[i]]
         if (is.null(cur.index)) {
-            next
+            cur.index <- seq_len(dim[i])
         }
+        cur.index <- cur.index + offset[i] - 1L
 
         # Expanding to account for duplicates in 'cur.index'.
         m <- findMatches(df[[i]], cur.index)
@@ -25,10 +26,10 @@ REF <- function(df, index) {
     df 
 }
 
-TEST <- function(df, index) 
+TEST <- function(df, index, dim, offset=rep(1L, length(dim)))
 # Derived from TileDBArray:::.extract_values
 {
-    index.info <- TileDBArray:::.format_indices(index)
+    index.info <- TileDBArray:::.format_indices(index, dim, offset)
     ndim <- length(index)
     output <- TileDBArray:::remap_indices(as.list(df[seq_len(ndim)]), index.info$remapping)
     list(
@@ -37,7 +38,7 @@ TEST <- function(df, index)
     )
 }
 
-SIMULATE_NONZERO <- function(indices, N, D=NULL) 
+SIMULATE_NONZERO <- function(indices, N, D=NULL, offset=NULL) 
 # The simulator function accepts:
 #
 # - 'indices': list specifying the indices of the full array to obtain the desired subarray.
@@ -55,6 +56,9 @@ SIMULATE_NONZERO <- function(indices, N, D=NULL)
             options[[i]] <- seq_len(D[i])
         } else {
             options[[i]] <- sort(unique(options[[i]]))
+        }
+        if (!is.null(offset)) {
+            options[[i]] <- options[[i]] + offset[i] - 1L
         }
     }
 
@@ -79,44 +83,44 @@ test_that("index remapping works correctly", {
     indices <- lapply(dims, sample, size=20, replace=TRUE)
 
     extracted <- SIMULATE_NONZERO(indices, 10)
-    output <- TEST(extracted, indices)
-    ref <- REF(extracted, indices)
+    output <- TEST(extracted, indices, dim=dims)
+    ref <- REF(extracted, indices, dim=dims)
     expect_rearranged(output$indices, output$values, ref)
 
     extracted <- SIMULATE_NONZERO(indices, 100)
-    output <- TEST(extracted, indices)
-    ref <- REF(extracted, indices)
+    output <- TEST(extracted, indices, dim=dims)
+    ref <- REF(extracted, indices, dim=dims)
     expect_rearranged(output$indices, output$values, ref)
 
     # Flooding with lots of duplicates.
     indices <- lapply(dims, sample, size=1000, replace=TRUE)
 
     extracted <- SIMULATE_NONZERO(indices, 10)
-    output <- TEST(extracted, indices)
-    ref <- REF(extracted, indices)
+    output <- TEST(extracted, indices, dim=dims)
+    ref <- REF(extracted, indices, dim=dims)
     expect_rearranged(output$indices, output$values, ref)
 
     extracted <- SIMULATE_NONZERO(indices, 100)
-    output <- TEST(extracted, indices)
-    ref <- REF(extracted, indices)
+    output <- TEST(extracted, indices, dim=dims)
+    ref <- REF(extracted, indices, dim=dims)
     expect_rearranged(output$indices, output$values, ref)
 
     extracted <- SIMULATE_NONZERO(indices, 1000) # More non-zero elements.
-    output <- TEST(extracted, indices)
-    ref <- REF(extracted, indices)
+    output <- TEST(extracted, indices, dim=dims)
+    ref <- REF(extracted, indices, dim=dims)
     expect_rearranged(output$indices, output$values, ref)
 
     # Slightly more complex example with varying indices.
     indices <- mapply(sample, x=dims, size=c(10, 50, 20), SIMPLIFY=FALSE, MoreArgs=list(replace=TRUE))
 
     extracted <- SIMULATE_NONZERO(indices, 100)
-    output <- TEST(extracted, indices)
-    ref <- REF(extracted, indices)
+    output <- TEST(extracted, indices, dim=dims)
+    ref <- REF(extracted, indices, dim=dims)
     expect_rearranged(output$indices, output$values, ref)
 
     extracted <- SIMULATE_NONZERO(indices, 1000)
-    output <- TEST(extracted, indices)
-    ref <- REF(extracted, indices)
+    output <- TEST(extracted, indices, dim=dims)
+    ref <- REF(extracted, indices, dim=dims)
     expect_rearranged(output$indices, output$values, ref)
 })
 
@@ -125,40 +129,40 @@ test_that("index remapping works correctly with NULLs", {
     indices[2] <- list(NULL)
 
     extracted <- SIMULATE_NONZERO(indices, 100, D=dims)
-    output <- TEST(extracted, indices)
-    ref <- REF(extracted, indices)
+    output <- TEST(extracted, indices, dim=dims)
+    ref <- REF(extracted, indices, dim=dims)
     expect_rearranged(output$indices, output$values, ref)
 
     extracted <- SIMULATE_NONZERO(indices, 1000, D=dims)
-    output <- TEST(extracted, indices)
-    ref <- REF(extracted, indices)
+    output <- TEST(extracted, indices, dim=dims)
+    ref <- REF(extracted, indices, dim=dims)
     expect_rearranged(output$indices, output$values, ref)
 
     # Knocking off the first index.
     indices[1] <- list(NULL)
 
     extracted <- SIMULATE_NONZERO(indices, 100, D=dims)
-    output <- TEST(extracted, indices)
-    ref <- REF(extracted, indices)
+    output <- TEST(extracted, indices, dim=dims)
+    ref <- REF(extracted, indices, dim=dims)
     expect_rearranged(output$indices, output$values, ref)
 
     extracted <- SIMULATE_NONZERO(indices, 1000, D=dims)
-    output <- TEST(extracted, indices)
-    ref <- REF(extracted, indices)
+    output <- TEST(extracted, indices, dim=dims)
+    ref <- REF(extracted, indices, dim=dims)
     expect_rearranged(output$indices, output$values, ref)
 
     # Knocking off the last index, in which case everything should be returned without modification.
     indices[3] <- list(NULL)
 
     extracted <- SIMULATE_NONZERO(indices, 100, D=dims)
-    output <- TEST(extracted, indices)
-    ref <- REF(extracted, indices)
+    output <- TEST(extracted, indices, dim=dims)
+    ref <- REF(extracted, indices, dim=dims)
     expect_rearranged(output$indices, output$values, ref)
     expect_identical(sort(DataFrame(ref)), sort(DataFrame(extracted)))
 
     extracted <- SIMULATE_NONZERO(indices, 1000, D=dims)
-    output <- TEST(extracted, indices)
-    ref <- REF(extracted, indices)
+    output <- TEST(extracted, indices, dim=dims)
+    ref <- REF(extracted, indices, dim=dims)
     expect_rearranged(output$indices, output$values, ref)
     expect_identical(nrow(extracted), nrow(ref))
 })
@@ -166,16 +170,31 @@ test_that("index remapping works correctly with NULLs", {
 test_that("index remapping works correctly with empty inputs", {
     indices <- lapply(dims, sample, size=0, replace=TRUE)
     extracted <- SIMULATE_NONZERO(indices, 0, D=dims)
-    output <- TEST(extracted, indices)
-    ref <- REF(extracted, indices)
+    output <- TEST(extracted, indices, dim=dims)
+    ref <- REF(extracted, indices, dim=dims)
     expect_rearranged(output$indices, output$values, ref)
     expect_identical(nrow(ref), 0L)
 
     indices <- lapply(dims, sample, size=100, replace=TRUE)
     extracted <- SIMULATE_NONZERO(indices, 0, D=dims)
-    output <- TEST(extracted, indices)
-    ref <- REF(extracted, indices)
+    output <- TEST(extracted, indices, dim=dims)
+    ref <- REF(extracted, indices, dim=dims)
     expect_rearranged(output$indices, output$values, ref)
     expect_identical(nrow(ref), 0L)
 })
 
+test_that("index remapping works correctly with non-unity offsets", {
+    indices <- lapply(dims, sample, size=20, replace=TRUE)
+
+    O <- 1:3
+    extracted <- SIMULATE_NONZERO(indices, 10, offset=O)
+    output <- TEST(extracted, indices, dim=dims, offset=O)
+    ref <- REF(extracted, indices, dim=dims, offset=O)
+    expect_rearranged(output$indices, output$values, ref)
+
+    O <- c(-10L, 10L, 100L)
+    extracted <- SIMULATE_NONZERO(indices, 100, offset=O)
+    output <- TEST(extracted, indices, dim=dims, offset=O)
+    ref <- REF(extracted, indices, dim=dims, offset=O)
+    expect_rearranged(output$indices, output$values, ref)
+})

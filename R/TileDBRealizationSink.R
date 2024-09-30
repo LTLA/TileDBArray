@@ -13,6 +13,7 @@
 #'     dimtype=getTileDBDimType(),
 #'     sparse=FALSE,
 #'     extent=getTileDBExtent(), 
+#'     offset=1L,
 #'     cellorder=getTileDBCellOrder(),
 #'     tileorder=getTileDBTileOrder(),
 #'     capacity=getTileDBCapacity(),
@@ -34,6 +35,7 @@
 #' \item \code{sparse}, a logical scalar indicating whether the array should be stored in sparse form.
 #' \item \code{extent}, an integer scalar (or vector of length equal to \code{dim}) specifying the tile extent for each dimension.
 #' Larger values improve compression at the cost of unnecessary data extraction during reads. 
+#' \item \code{offset}, an integer scalar (or vector of length equal to \code{dim}) specifying the starting offset for each dimension's domain.
 #' \item \code{cellorder}, a string specifying the ordering of cells within each tile.
 #' \item \code{tileorder}, a string specifying the ordering of tiles across the array.
 #' \item \code{capacity}, an integer scalar specifying the size of each data tile in the sparse case.
@@ -121,16 +123,27 @@ TileDBRealizationSink <- function(
     dimtype=getTileDBDimType(),
     sparse=FALSE, 
     extent=getTileDBExtent(), 
+    offset=1L,
     cellorder=getTileDBCellOrder(),
     tileorder=getTileDBTileOrder(),
     capacity=getTileDBCapacity(),
     context=getTileDBContext())
 {
-    collected <- vector("list", length(dim))
-    extent <- rep(as.integer(extent), length(dim))
+    ndim <- length(dim)
+    collected <- vector("list", ndim)
+    extent <- rep(as.integer(extent), ndim)
+    offset <- rep(as.integer(offset), ndim)
+
     for (i in seq_along(dim)) {
-        ex <- min(extent[i], dim[i])
-        collected[[i]] <- tiledb_dim(ctx=context, paste0("d", i), c(1L, dim[i]), tile=ex, type=dimtype)
+        curdim <- dim[i]
+        ex <- min(extent[i], curdim)
+        collected[[i]] <- tiledb_dim(
+            ctx=context,
+            paste0("d", i),
+            offset[i] - 1L + c(1L, curdim),
+            tile=ex, 
+            type=dimtype
+        )
     }
     dom <- tiledb_domain(ctx=context, dims=collected)
 
@@ -155,7 +168,7 @@ TileDBRealizationSink <- function(
     tiledb_array_create(path, schema)
     .edit_metadata(path, sparse=sparse, type=type, dimnames=dimnames)
 
-    new("TileDBRealizationSink", dim=dim, type=type, path=path, sparse=sparse, attr=attr)
+    new("TileDBRealizationSink", dim=dim, type=type, path=path, sparse=sparse, attr=attr, offset=offset)
 }
 
 .edit_metadata <- function(path, sparse, type, dimnames) {
@@ -204,26 +217,28 @@ setMethod("write_block", "TileDBRealizationSink", function(sink, viewport, block
     if (sink@sparse) {
         # Need this because COO_SparseArray doesn't support [.
         if (is(block, "COO_SparseArray")) {
-            store <- data.frame(
-                d1=nzcoo(block)[,1] + starts[1],
-                d2=nzcoo(block)[,2] + starts[2],
-                sink=nzdata(block)
-            )
+            idx <- nzcoo(block)
+            vals <- nzdata(block)
         } else {
             idx <- nzwhich(block, arr.ind=TRUE)
-            store <- data.frame(
-                d1=idx[,1] + starts[1],
-                d2=idx[,2] + starts[2],
-                sink=block[idx]
-            )
+            vals <- block[idx]
         }
 
-        colnames(store)[3] <- sink@attr
-        obj[] <- store
+        ndim <- ncol(idx)
+        store <- vector("list", ndim + 1L)
+        for (i in seq_len(ndim)) {
+            store[[i]] <- idx[,i] + starts[i] + sink@offset[i] - 1L
+        }
+        store[[ndim + 1]] <- vals
+
+        names(store) <- c(sprintf("d%i", seq_len(ndim)), sink@attr)
+        obj[] <- data.frame(store)
 
     } else {
         args <- lapply(width(viewport), seq_len)
-        args <- mapply(FUN="+", starts, args, SIMPLIFY=FALSE)
+        for (i in seq_along(args)) {
+            args[[i]] <- args[[i]] + starts[i] + sink@offset[i] - 1L
+        }
 
         # Need to coerce the block, because it could be a SparseArray
         # derivative.

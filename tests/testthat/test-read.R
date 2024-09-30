@@ -72,3 +72,11 @@ test_that("more complex matrix operations work correctly", {
         expect_equivalent(as.matrix(t(r)), as.matrix(t(t)))
     }
 })
+
+test_that("read operations work correctly with a non-zero offset", {
+    XI <- writeTileDBArray(DI, offset=c(5L, -5L))
+    expect_equivalent(as.matrix(XI), as.matrix(DI))
+
+    YD <- writeTileDBArray(SD, offset=c(-10L, 10L))
+    expect_equivalent(as.matrix(YD), as.matrix(SD))
+})

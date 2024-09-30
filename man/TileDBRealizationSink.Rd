@@ -28,6 +28,7 @@ Write array data to a TileDB backend via \pkg{DelayedArray}'s \linkS4class{Reali
     dimtype=getTileDBDimType(),
     sparse=FALSE,
     extent=getTileDBExtent(), 
+    offset=1L,
     cellorder=getTileDBCellOrder(),
     tileorder=getTileDBTileOrder(),
     capacity=getTileDBCapacity(),
@@ -49,6 +50,7 @@ If \code{NULL}, this is automatically determined from \code{type} using \code{\l
 \item \code{sparse}, a logical scalar indicating whether the array should be stored in sparse form.
 \item \code{extent}, an integer scalar (or vector of length equal to \code{dim}) specifying the tile extent for each dimension.
 Larger values improve compression at the cost of unnecessary data extraction during reads. 
+\item \code{offset}, an integer scalar (or vector of length equal to \code{dim}) specifying the starting offset for each dimension's domain.
 \item \code{cellorder}, a string specifying the ordering of cells within each tile.
 \item \code{tileorder}, a string specifying the ordering of tiles across the array.
 \item \code{capacity}, an integer scalar specifying the size of each data tile in the sparse case.

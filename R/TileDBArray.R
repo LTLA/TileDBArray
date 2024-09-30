@@ -93,10 +93,14 @@ TileDBArraySeed <- function(x, attr) {
     }
 
     obj <- tiledb_array(x)
-    on.exit(tiledb_array_close(obj))
+    on.exit(tiledb_array_close(obj), add=TRUE, after=FALSE)
 
     s <- schema(obj)
-    d <- dim(domain(s))
+    dims <- dimensions(s)
+    doms <- lapply(dims, domain)
+    o <- vapply(doms, function(x) x[1L], 0L)
+    d <- vapply(doms, function(x) diff(x) + 1L, 0L)
+    e <- vapply(dims, tiledb::tile, 0L)
 
     a <- attrs(s)
     if (missing(attr)) {
@@ -104,42 +108,36 @@ TileDBArraySeed <- function(x, attr) {
     } else if (!attr %in% names(a)) {
         stop("'attr' not in the TileDB attributes")
     }
-    
-    my.type <- tiledb:::tiledb_datatype_R_type(datatype(a[[attr]]))
-    if (! my.type %in% c("logical", "double", "integer", "character")) {
+
+    my.type <- tiledb_datatype_R_type(datatype(a[[attr]]))
+    if (!(my.type %in% c("logical", "double", "integer", "character"))) {
         stop("'attr' refers to an unsupported type")
     }
-    
-    meta <- .get_metadata(x, sparse=is.sparse(s))
-    if (my.type=="integer" && identical(meta$type, "logical")) {
-        my.type <- meta$type
+
+    opened <- tiledb_array_open(obj, "READ")
+    on.exit(tiledb_array_close(opened), add=TRUE, after=FALSE) # do I need to do this if we already close it above? I don't know.
+    rtype <- tiledb_get_metadata(opened, "type")
+    if (my.type=="integer" && identical(rtype, "logical")) {
+        my.type <- rtype
     }
 
-    dimnames <- vector("list", length(d))
-    if (!is.null(meta$dimnames)) {
-        dimnames <- meta$dimnames
-    }
-
-    new("TileDBArraySeed", dim=d, dimnames=dimnames, path=x, 
-        sparse=is.sparse(s), attr=attr, type=my.type, extent=meta$extent)
-}
-
-.get_metadata <- function(path, sparse) {
-    obj <- tiledb_array(path)
-    on.exit(tiledb_array_close(obj), add=TRUE)
-    obj <- tiledb_array_open(obj, "READ")
-
-    type <- tiledb_get_metadata(obj, "type")
-
-    dimnames <- tiledb_get_metadata(obj, "dimnames")
+    dimnames <- tiledb_get_metadata(opened, "dimnames")
     if (!is.null(dimnames)) {
         dimnames <- .unpack_dimnames(dimnames)
+    } else {
+        dimnames <- vector("list", length(d))
     }
 
-    D <- dimensions(schema(obj))
-    extent <- vapply(D, tile, 0L)
-
-    list(type=type, dimnames=dimnames, extent=extent)
+    new("TileDBArraySeed", 
+        dim=d,
+        dimnames=dimnames,
+        path=x, 
+        sparse=is.sparse(s),
+        attr=attr,
+        type=my.type,
+        extent=e,
+        offset=o
+    )
 }
 
 #' @importFrom S4Vectors setValidity2
@@ -147,6 +145,19 @@ setValidity2("TileDBArraySeed", function(object) {
     msg <- .common_checks(object)
 
     d <- dim(object)
+    o <- object@offset
+    if (length(o) != length(d)) {
+        msg <- c(msg, "'offset' must have the same length as 'dim'")
+    }
+
+    e <- object@extent
+    if (length(e) != length(d)) {
+        msg <- c(msg, "'extent' must have the same length as 'dim'")
+    }
+    if (!all(e >= 0L)) {
+        msg <- c(msg, "'extent' must contain non-negative integers")
+    }
+
     dn <- dimnames(object)
     if (length(dn)!=length(d)) {
         msg <- c(msg, "'dimnames' must the same length as 'dim'")
@@ -199,7 +210,7 @@ setMethod("extract_array", "TileDBArraySeed", function(x, index) {
     obj <- tiledb_array(path(x), attrs=x@attr, query_type="READ", return_as="data.frame")
     on.exit(tiledb_array_close(obj))
 
-    df <- .extract_values(obj, index)
+    df <- .extract_values(obj, index, dim=x@dim, offset=x@offset)
     output[df$indices] <- as(df$values, type(x))
     output
 })
@@ -225,7 +236,7 @@ setMethod("extract_sparse_array", "TileDBArraySeed", function(x, index) {
     obj <- tiledb_array(path(x), attrs=x@attr, query_type="READ")
     on.exit(tiledb_array_close(obj))
 
-    df <- .extract_values(obj, index)
+    df <- .extract_values(obj, index, dim=x@dim, offset=x@offset)
     COO_SparseArray(d2, nzcoo=df$indices, nzdata=as(df$values, type(x)))
 })
 
@@ -242,18 +253,27 @@ setMethod("DelayedArray", "TileDBArraySeed",
 #' @export
 setMethod("matrixClass", "TileDBArray", function(x) "TileDBMatrix")
 
-.format_indices <- function(index) {
+.format_indices <- function(index, dim, offset) {
     ndim <- length(index)
     contiguous <- remapping <- vector("list", ndim)
 
     for (i in seq_len(ndim)) {
         cur.index <- index[[i]]
 
-        if (!is.null(cur.index)) {
+        if (is.null(cur.index)) {
+            curd <- dim[i]
+            remapping[[i]] <- list(
+                ref.value = seq_len(curd) + offset[i] - 1L,
+                ref.length = rep(1L, curd),
+                requested = seq_len(curd)
+            )
+            contiguous[[i]] <- cbind(1L, curd) + offset[i] - 1L
+
+        } else {
             o <- order(cur.index)
             runs <- rle(cur.index[o])
 
-            rv <- runs$value
+            rv <- runs$value + offset[i] - 1L
             remapping[[i]] <- list(
                 ref.value=rv,
                 ref.length=runs$length,
@@ -271,8 +291,8 @@ setMethod("matrixClass", "TileDBArray", function(x) "TileDBMatrix")
     list(contiguous=contiguous, remapping=remapping)
 }
 
-.extract_values <- function(obj, indices) {
-    index.info <- .format_indices(indices)
+.extract_values <- function(obj, indices, dim, offset) {
+    index.info <- .format_indices(indices, dim, offset)
     selected_ranges(obj) <- index.info$contiguous
     extracted <- obj[]
 

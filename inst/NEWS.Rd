@@ -8,6 +8,12 @@
 \item Support other datatypes for the dimensions and storage when configuring a \code{TileDBRealizationSink}.
 This is achieved via the new \code{storagetype=} and \code{dimtype=} arguments.
 Also added \code{getTileDBDimType()} and \code{setTileDBDimType()} to globally define the choice of dimension datatype.
+
+\item Bugfix to \code{TileDBArraySeed} to correctly handle dimension domains that do not start at 1.
+This requires a modification to the class to record the domain offset.
+
+\item Added a \code{offset=} option to \code{TileDBRealizationSink()} to create arrays with dimension domains that do not start at 1.
+This requires a modification to the associated class to record the domain offset.
 }}
 
 \section{Version 1.2.0}{\itemize{
