@@ -80,3 +80,62 @@ test_that("read operations work correctly with a non-zero offset", {
     YD <- writeTileDBArray(SD, offset=c(-10L, 10L))
     expect_equivalent(as.matrix(YD), as.matrix(SD))
 })
+
+test_that("extract_array works in a wide variety of scenarios", {
+    XI <- writeTileDBArray(DI, offset=c(5L, -5L))
+    YD <- writeTileDBArray(SD, offset=c(-10L, 10L))
+    tests <- list(
+        list(mat=DI, ref=XI),
+        list(mat=YD, ref=SD)
+    )
+
+    for (x in tests) {
+        NR <- nrow(x$ref)
+        NC <- ncol(x$ref)
+
+        for (i in 1:7) {
+            if (i == 1L) {
+                indices <- list(NULL, NULL)
+            } else if (i == 2L) {
+                indices <- list(NULL, 1:NC) # sorted, unique
+            } else if (i == 3L) {
+                indices <- list(sample(NR), NULL) # unsorted, unique
+            } else if (i == 4L) {
+                indices <- list(rep(1:NR, each=2L), NULL) # sorted, duplicate
+            } else if (i == 5L) {
+                indices <- list(sample(rep(1:NR, each=2)), sample(rep(1:NC, each=3))) # unsorted, duplicate
+            } else if (i == 6L) {
+                indices <- list(seq(1, NR, by=2), seq(1, NC, by=3)) # non-consecutive jumps.
+            } else {
+                indices <- list(integer(0), integer(0))
+            }
+
+            expect_equivalent(
+                extract_array(x$mat, indices),
+                extract_array(x$ref, indices)
+            )
+        }
+    }
+})
+
+test_that("extract_sparse_array works in a wide variety of scenarios", {
+    YD <- writeTileDBArray(SD, offset=c(-10L, 10L))
+    NR <- nrow(YD)
+    NC <- ncol(YD)
+
+    for (i in 1:5) {
+        if (i == 1L) {
+            indices <- list(NULL, NULL)
+        } else if (i == 2L) {
+            indices <- list(NULL, 1:NC) # sorted, unique
+        } else if (i == 3L) {
+            indices <- list(sample(NR), NULL) # unsorted, unique
+        } else if (i == 4L) {
+            indices <- list(seq(1, NR, by=2), seq(1, NC, by=3)) # non-consecutive jumps.
+        } else {
+            indices <- list(integer(0), integer(0))
+        }
+
+        expect_equivalent(extract_sparse_array(YD, indices), extract_sparse_array(SD, indices))
+    }
+})

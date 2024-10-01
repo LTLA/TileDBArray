@@ -9,6 +9,4 @@
 #' @import tiledb
 #' @import DelayedArray
 #' @import methods
-#' @importFrom Rcpp sourceCpp
-#' @useDynLib TileDBArray
 NULL

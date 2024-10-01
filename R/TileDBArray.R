@@ -196,23 +196,102 @@ setMethod("path", "TileDBArraySeed", function(object, ...) {
     object@path
 })
 
+.compact_ranges <- function(selected, delta=diff(selected)) {
+    is.not.contig <- which(delta != 1L)
+    cbind(
+        selected[c(1L, is.not.contig + 1L)],
+        selected[c(is.not.contig, length(selected))]
+    )
+}
+
 #' @export
 setMethod("extract_array", "TileDBArraySeed", function(x, index) {
     fill <- switch(type(x), double=0, integer=0L, logical=FALSE)
     d2 <- .get_block_dims(x, index)
-    output <- array(fill, dim=d2)
 
     # Hack to overcome zero-length indices that cause tiledb to throw.
     if (any(d2==0L)) {
-        return(output)
+        return(array(fill, dim=d2))
     }
 
-    obj <- tiledb_array(path(x), attrs=x@attr, query_type="READ", return_as="data.frame")
+    raw.output.type <- if (x@sparse) "data.frame" else "array"
+    obj <- tiledb_array(x@path, attrs=x@attr, query_type="READ", return_as=raw.output.type)
     on.exit(tiledb_array_close(obj))
 
-    df <- .extract_values(obj, index, dim=x@dim, offset=x@offset)
-    output[df$indices] <- as(df$values, type(x))
-    output
+    ndim <- length(index)
+    contiguous <- remapping <- expanders <- vector("list", ndim)
+    any.modified <- FALSE
+
+    for (i in seq_len(ndim)) {
+        cur.index <- index[[i]]
+
+        if (is.null(cur.index)) {
+            curd <- x@dim[i]
+            contiguous[[i]] <- cbind(1L, curd) + x@offset[i] - 1L
+
+        } else {
+            original <- cur.index + x@offset[i] - 1L
+            selected <- original
+
+            # Need to account for unsorted or duplicate indices.
+            modified <- FALSE
+            if (is.unsorted(selected)) {
+                modified <- TRUE
+                selected <- sort(selected)
+            }
+            delta <- diff(selected)
+            is.dup <- delta == 0L
+            if (any(is.dup)) {
+                modified <- TRUE
+                selected <- selected[c(TRUE, !is.dup)]
+                delta <- diff(selected)
+            }
+
+            if (modified) {
+                any.modified <- TRUE
+                expanders[[i]] <- match(original, selected)
+            }
+            if (raw.output.type == "data.frame") {
+                remapping[[i]] <- selected
+            }
+
+            contiguous[[i]] <- .compact_ranges(selected, delta)
+        }
+    }
+
+    selected_ranges(obj) <- contiguous 
+    output <- obj[]
+
+    if (raw.output.type == "data.frame") {
+        indices <- matrix(0L, nrow(output), ndim)
+        quick.dim <- integer(ndim) 
+        for (i in seq_len(ndim)) {
+            curremap <- remapping[[i]]
+            if (!is.null(curremap)) {
+                indices[,i] <- match(output[[i]], curremap)
+                quick.dim[i] <- length(curremap)
+            } else {
+                indices[,i] <- output[[i]] - x@offset[i] + 1L
+                quick.dim[i] <- x@dim[i]
+            }
+        }
+        extracted <- array(fill, dim=quick.dim)
+        extracted[indices] <- as(output[[ndim + 1L]], x@type)
+    } else {
+        extracted <- output[[x@attr]]
+        storage.mode(extracted) <- x@type
+    }
+
+    if (any.modified) {
+        for (i in seq_along(expanders)) {
+            if (is.null(expanders[[i]])) {
+                expanders[[i]] <- substitute()
+            }
+        }
+        expanders$drop <- FALSE
+        extracted <- do.call(`[`, c(list(extracted), expanders))
+    }
+    extracted
 })
 
 .get_block_dims <- function(x, index) {
@@ -233,11 +312,46 @@ setMethod("extract_sparse_array", "TileDBArraySeed", function(x, index) {
         return(COO_SparseArray(d2, nzdata=vector(type(x))))
     }
 
-    obj <- tiledb_array(path(x), attrs=x@attr, query_type="READ")
+    obj <- tiledb_array(x@path, attrs=x@attr, query_type="READ", return_as="data.frame")
     on.exit(tiledb_array_close(obj))
 
-    df <- .extract_values(obj, index, dim=x@dim, offset=x@offset)
-    COO_SparseArray(d2, nzcoo=df$indices, nzdata=as(df$values, type(x)))
+    ndim <- length(index)
+    contiguous <- remapping <- vector("list", ndim)
+
+    for (i in seq_len(ndim)) {
+        cur.index <- index[[i]]
+
+        if (is.null(cur.index)) {
+            curd <- x@dim[i]
+            contiguous[[i]] <- cbind(1L, curd) + x@offset[i] - 1L
+
+        } else {
+            selected <- cur.index + x@offset[i] - 1L
+            remapping[[i]] <- selected
+
+            # No need to worry about duplicates here.
+            if (is.unsorted(selected)) {
+                o <- order(selected)
+                selected <- selected[o]
+            }
+
+            contiguous[[i]] <- .compact_ranges(selected)
+        }
+    }
+
+    selected_ranges(obj) <- contiguous
+    extracted <- obj[]
+    indices <- matrix(0L, nrow(extracted), ndim)
+    for (i in seq_len(ndim)) {
+        curremap <- remapping[[i]]
+        if (!is.null(curremap)) {
+            indices[,i] <- match(extracted[[i]], curremap)
+        } else {
+            indices[,i] <- extracted[[i]] - x@offset[i] + 1L
+        }
+    }
+
+    COO_SparseArray(d2, nzcoo=indices, nzdata=as(extracted[,ndim + 1L], x@type))
 })
 
 #' @export
@@ -252,56 +366,3 @@ setMethod("DelayedArray", "TileDBArraySeed",
 
 #' @export
 setMethod("matrixClass", "TileDBArray", function(x) "TileDBMatrix")
-
-.format_indices <- function(index, dim, offset) {
-    ndim <- length(index)
-    contiguous <- remapping <- vector("list", ndim)
-
-    for (i in seq_len(ndim)) {
-        cur.index <- index[[i]]
-
-        if (is.null(cur.index)) {
-            curd <- dim[i]
-            remapping[[i]] <- list(
-                ref.value = seq_len(curd) + offset[i] - 1L,
-                ref.length = rep(1L, curd),
-                requested = seq_len(curd)
-            )
-            contiguous[[i]] <- cbind(1L, curd) + offset[i] - 1L
-
-        } else {
-            o <- order(cur.index)
-            runs <- rle(cur.index[o])
-
-            rv <- runs$value + offset[i] - 1L
-            remapping[[i]] <- list(
-                ref.value=rv,
-                ref.length=runs$length,
-                requested=o
-            )
-    
-            is.not.contig <- which(diff(rv)!=1L)
-            contiguous[[i]] <- cbind(
-                rv[c(1L, is.not.contig + 1L)],
-                rv[c(is.not.contig, length(rv))]
-            )
-        }
-    }
-
-    list(contiguous=contiguous, remapping=remapping)
-}
-
-.extract_values <- function(obj, indices, dim, offset) {
-    index.info <- .format_indices(indices, dim, offset)
-    selected_ranges(obj) <- index.info$contiguous
-    extracted <- obj[]
-
-    # Resolves a 1-to-many mapping between the extracted and requested indices.
-    ndim <- length(indices)
-    output <- remap_indices(as.list(extracted[seq_len(ndim)]), index.info$remapping)
-
-    list(
-        indices=output$indices,
-        values=rep.int(extracted[[ndim + 1L]], output$expand)
-    )
-}
