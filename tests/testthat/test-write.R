@@ -4,11 +4,12 @@
 DI <- matrix(rpois(10000, 5), nrow=200)
 DD <- matrix(rnorm(10000), nrow=200)
 DL <- DD > 0
+DC <- matrix(sample(letters, 10000, replace=TRUE), nrow=200)
 
 SD <- Matrix::rsparsematrix(50, 50, density=0.1)
 SL <- SD > 0
 
-ref <- list(DI, DD, DL, SD, SL)
+ref <- list(DI, DD, DL, DC, SD, SL)
 
 test_that("writing works as expected", {
     for (x in seq_along(ref)) {

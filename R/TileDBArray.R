@@ -206,7 +206,7 @@ setMethod("path", "TileDBArraySeed", function(object, ...) {
 
 #' @export
 setMethod("extract_array", "TileDBArraySeed", function(x, index) {
-    fill <- switch(type(x), double=0, integer=0L, logical=FALSE)
+    fill <- switch(type(x), character="", double=0, integer=0L, logical=FALSE)
     d2 <- .get_block_dims(x, index)
 
     # Hack to overcome zero-length indices that cause tiledb to throw.
