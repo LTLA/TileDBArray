@@ -151,11 +151,13 @@ TileDBRealizationSink <- function(
         storagetype <- r_to_tiledb_type(vector(type))
     }
 
+    ncells <- if (storagetype %in% c("ASCII", "CHAR", "UTF8")) NA_integer_ else 1L
+
     schema <- tiledb_array_schema(
         ctx=context,
         domain=dom, 
         sparse=sparse,
-        attrs=list(tiledb_attr(ctx=context, attr, type=storagetype)),
+        attrs=list(tiledb_attr(attr, type=storagetype, ncells=ncells, ctx=context)),
         cell_order = cellorder,
         tile_order = tileorder,
         capacity = capacity

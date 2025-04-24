@@ -10,14 +10,17 @@ XD <- as(DD, "TileDBArray")
 DL <- DD > 0
 XL <- as(DL, "TileDBArray")
 
+DC <- matrix(sample(letters, 10000, replace=TRUE), nrow=200)
+XC <- as(DC, "TileDBArray")
+
 SD <- Matrix::rsparsematrix(50, 50, density=0.1)
 YD <- as(SD, "TileDBArray")
 
 SL <- SD > 0
 YL <- as(SL, "TileDBArray")
 
-tdb <- list(XI, XD, XL, YD, YL)
-ref <- list(DI, DD, DL, SD, SL)
+tdb <- list(XI, XD, XL, XC, YD, YL)
+ref <- list(DI, DD, DL, DC, SD, SL)
 
 test_that("basic read operations work correctly ", {
     for (x in seq_along(tdb)) {
@@ -62,6 +65,9 @@ test_that("more complex matrix operations work correctly", {
     for (x in seq_along(tdb)) {
         r <- ref[[x]]
         t <- tdb[[x]]
+
+        if (is.character(r))
+            next
 
         expect_equal(colSums(r), colSums(t))
         expect_equal(rowSums(r), rowSums(t))
