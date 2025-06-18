@@ -207,7 +207,7 @@ setValidity2("TileDBRealizationSink", function(object) {
 
 #' @export
 #' @importClassesFrom SparseArray COO_SparseArray
-#' @importFrom SparseArray nzcoo nzdata nzwhich
+#' @importFrom SparseArray nzwhich nzvals
 #' @importFrom DelayedArray start width
 setMethod("write_block", "TileDBRealizationSink", function(sink, viewport, block) {
     starts <- start(viewport) - 1L
@@ -215,14 +215,8 @@ setMethod("write_block", "TileDBRealizationSink", function(sink, viewport, block
     on.exit(tiledb_array_close(obj))
 
     if (sink@sparse) {
-        # Need this because COO_SparseArray doesn't support [.
-        if (is(block, "COO_SparseArray")) {
-            idx <- nzcoo(block)
-            vals <- nzdata(block)
-        } else {
-            idx <- nzwhich(block, arr.ind=TRUE)
-            vals <- block[idx]
-        }
+        idx <- nzwhich(block, arr.ind=TRUE)
+        vals <- nzvals(block)
 
         ndim <- ncol(idx)
         store <- vector("list", ndim + 1L)
