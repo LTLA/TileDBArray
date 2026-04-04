@@ -207,17 +207,17 @@ setValidity2("TileDBRealizationSink", function(object) {
 
 #' @export
 #' @importClassesFrom SparseArray COO_SparseArray
-#' @importFrom SparseArray nzwhich nzvals
+#' @importFrom SparseArray nzwhich nzvals is_sparse
 #' @importFrom DelayedArray start width
 setMethod("write_block", "TileDBRealizationSink", function(sink, viewport, block) {
     obj <- tiledb_array(sink@path, attrs=sink@attr, query_type="WRITE")
     on.exit(tiledb_array_close(obj))
 
-    if (sink@sparse) {
+    if (is_sparse(block)) {
         idx <- nzwhich(block, arr.ind=TRUE)
         vals <- nzvals(block)
-
         ndim <- ncol(idx)
+
         store <- vector("list", ndim + 1L)
         starts <- start(viewport)
         for (i in seq_len(ndim)) {
@@ -225,22 +225,24 @@ setMethod("write_block", "TileDBRealizationSink", function(sink, viewport, block
         }
         store[[ndim + 1]] <- vals
 
-        names(store) <- c(sprintf("d%i", seq_len(ndim)), sink@attr)
-        obj[] <- data.frame(store)
-
     } else {
         starts <- start(viewport)
         widths <- width(viewport)
         ndim <- length(starts)
 
-        ranges <- vector("list", ndim)
+        store <- vector("list", ndim + 1L)
+        inner.reps <- cumprod(c(1, widths))
+        outer.reps <- rev(cumprod(c(1, rev(widths))))
         for (i in seq_len(ndim)) {
-            actual.start <- starts[i] + (sink@offset[i] - 1L)
-            ranges[[i]] <- cbind(actual.start, actual.start + widths[i] - 1L)
+            irep <- inner.reps[i] 
+            orep <- outer.reps[i + 1]
+            store[[i]] <- rep(rep(seq_len(widths[i]) + (starts[i] - 1L) + (sink@offset[i] - 1L), each=irep), orep)
         }
-        selected_ranges(obj) <- ranges
-        obj[] <- as.array(block) # Need to coerce the block, because it could be a SparseArray derivative.
+        store[[ndim + 1]] <- as.vector(as.array(block)) # Need to coerce the block, because it could be a SparseArray derivative.
     }
+
+    names(store) <- c(sprintf("d%i", seq_len(ndim)), sink@attr)
+    obj[] <- data.frame(store)
 
     sink
 })
